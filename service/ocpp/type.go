@@ -1,33 +1,55 @@
 package ocpp
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
+)
+
+type MessageType int
+const (
+    Request   MessageType = 2
+    Confirmation MessageType = 3
+)
+// IsValid checks if the MessageType is valid.
+func (m MessageType) IsValid() bool {
+    return m == Request || m == Confirmation
+}
+
+type ActionType string
+const (
+    Heartbeat      ActionType = core.HeartbeatFeatureName
+)
+// IsValid checks if the ActionType is valid.
+func (a ActionType) IsValid() bool {
+    return a == Heartbeat
+}
 
 // RequestBody represents a request message in the OCPP server.
 type RequestBody struct {
-    MessageType int         // 2
-    MessageId   string      // UUID
-    Action      string      // e.g. "Heartbeat"
-    Payload    	any 		// e.g. interface{}
+    MessageType MessageType                 // 2
+    MessageId   string                      // UUID
+    Action      ActionType                  // e.g. Heartbeat
+    Payload     []byte                      // e.g. interface{}
 }
-
 // ConfirmationBody represents a confirmation message in the OCPP server.
 type ConfirmationBody struct {
-    MessageType int         // 3
-    MessageId   string      // UUID
-    Payload    	any 		// e.g. interface{}
+    MessageType MessageType                 // 3
+    MessageId   string                      // UUID
+    Payload     []byte                      // e.g. interface{}
 }
 
 // RequestState represents the state of a request in the OCPP server.
 type RequestState struct {
-    Type int // 2 or 3
-    Id   string      // UUID
+    Type MessageType    // 2
+    Id   string         // UUID
+    Action ActionType  // e.g. Heartbeat 
 }
 
 // State holds the current state of the OCPP server.
 type State struct {
     RequestStates []RequestState
 }
-
 // Append adds a new RequestState to the State if it doesn't already exist.
 func (s *State) Append(state RequestState) {
     for _, existing := range s.RequestStates {
@@ -37,7 +59,6 @@ func (s *State) Append(state RequestState) {
     }
     s.RequestStates = append(s.RequestStates, state)
 }
-
 // FindId searches for a RequestState by its ID and returns it if found.
 func (s *State) FindId(id string) (RequestState, error) {
     for _, existing := range s.RequestStates {
@@ -45,5 +66,5 @@ func (s *State) FindId(id string) (RequestState, error) {
             return existing, nil
         }
     }
-    return RequestState{}, fmt.Errorf("RequestState with id %s not found", id)
+    return RequestState{}, fmt.Errorf("id %s not found", id)
 }

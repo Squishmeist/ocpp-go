@@ -1,22 +1,43 @@
 package ocpp
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
+)
 
 
-func handleRequestBody(body RequestBody, state *State) {
-	fmt.Printf("Received RequestBody: MessageType=%d, MessageId=%s, Action=%s, Payload=%v\n",
-		body.MessageType, body.MessageId, body.Action, body.Payload)
-	state.Append(RequestState{Type: body.MessageType, Id: body.MessageId})
+func handleRequestBody(body RequestBody, state *State) error {
+	switch body.Action {
+	case Heartbeat:
+		obj, err := unmarshalAndValidate[core.HeartbeatRequest](body.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal HeartbeatRequest: %w", err)
+		}
+		fmt.Printf("HeartbeatRequest: %v\n", obj)
+	default:
+		return fmt.Errorf("unknown action: %s", body.Action)
+	}
+
+	state.Append(RequestState{Type: body.MessageType, Id: body.MessageId, Action: body.Action})
+	return nil
 }
 
 func handleConfirmationBody(body ConfirmationBody, state *State) error {
-	fmt.Printf("Received ConfirmationBody: MessageType=%d, MessageId=%s, Payload=%v\n",
-		body.MessageType, body.MessageId, body.Payload)
 	match, err := state.FindId(body.MessageId)
 	if err != nil {
-		fmt.Println("Error finding RequestState:", err)
 		return fmt.Errorf("RequestState not found: %w", err)
 	}
-	fmt.Printf("Matched RequestState: Type=%d, Id=%s\n", match.Type, match.Id)
+
+	switch match.Action {
+	case Heartbeat:
+		obj, err := unmarshalAndValidate[core.HeartbeatConfirmation](body.Payload)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal HeartbeatConfirmation: %w", err)
+		}
+		fmt.Printf("HeartbeatConfirmation: %v\n", obj)
+	default:
+		return fmt.Errorf("unknown action for confirmation: %s", match.Action)
+	}
 	return nil
 }

@@ -24,7 +24,6 @@ func NewServer() *core.HttpServer {
 
 func topic(server *core.HttpServer, state *State) {
 	server.AddRoute(http.MethodPost, "/topic", func(ctx echo.Context) error {
-		// Deconstruct the request body
 		body, err := deconstructBody(ctx)
 		if err != nil {
 			fmt.Println("Failed to deconstruct request body:", err)
@@ -34,14 +33,22 @@ func topic(server *core.HttpServer, state *State) {
 		// Process the body based on its type
 		switch body := body.(type) {
 		case RequestBody:
-			handleRequestBody(body, state)
+			err := handleRequestBody(body, state)
+			if err != nil {
+				fmt.Println("Error handling RequestBody:", err)
+				return ctx.String(http.StatusInternalServerError, "Error handling RequestBody")
+			}
 		case ConfirmationBody:
-			handleConfirmationBody(body, state)
+			err := handleConfirmationBody(body, state)
+			if err != nil {
+				fmt.Println("Error handling ConfirmationBody:", err)
+				return ctx.String(http.StatusInternalServerError, "Failed to process")
+			}
 		default:
 			return ctx.String(http.StatusBadRequest, "Unknown body type")
 		}
 
-		fmt.Print("State after processing: ", *state)
+		fmt.Println("State after processing: ", *state)
 		return ctx.String(http.StatusOK, "Processed successfully")
 	})
 }
