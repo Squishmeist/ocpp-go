@@ -19,25 +19,34 @@ func handleRequestBody(body RequestBody, state *State) error {
 		return fmt.Errorf("unknown action: %s", body.Action)
 	}
 
-	state.Append(RequestState{Type: body.MessageType, Id: body.MessageId, Action: body.Action})
+	state.AddRequest(RequestBody{MessageType: body.MessageType, MessageId: body.MessageId, Action: body.Action})
 	return nil
 }
 
 func handleConfirmationBody(body ConfirmationBody, state *State) error {
-	match, err := state.FindId(body.MessageId)
+	match, err := state.FindById(body.MessageId)
 	if err != nil {
-		return fmt.Errorf("RequestState not found: %w", err)
+		return fmt.Errorf("RequestBody not found: %w", err)
 	}
 
-	switch match.Action {
+	if match.Confirmation != nil {
+		return fmt.Errorf("confirmation already exists for MessageId: %s", body.MessageId)
+	}
+
+	switch match.Request.Action {
 	case Heartbeat:
 		obj, err := unmarshalAndValidate[core.HeartbeatConfirmation](body.Payload)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal HeartbeatConfirmation: %w", err)
 		}
 		fmt.Printf("HeartbeatConfirmation: %v\n", obj)
+		state.AddConfirmation(ConfirmationBody{
+			MessageType: body.MessageType,
+			MessageId:   body.MessageId,
+			Payload:     body.Payload,
+		})
 	default:
-		return fmt.Errorf("unknown action for confirmation: %s", match.Action)
+		return fmt.Errorf("unknown action for confirmation: %s", match.Request.Action)
 	}
 	return nil
 }

@@ -11,7 +11,7 @@ const (
     Request   MessageType = 2
     Confirmation MessageType = 3
 )
-// IsValid checks if the MessageType is valid.
+// checks if the MessageType is valid.
 func (m MessageType) IsValid() bool {
     return m == Request || m == Confirmation
 }
@@ -20,51 +20,59 @@ type ActionType string
 const (
     Heartbeat      ActionType = core.HeartbeatFeatureName
 )
-// IsValid checks if the ActionType is valid.
+// checks if the ActionType is valid.
 func (a ActionType) IsValid() bool {
     return a == Heartbeat
 }
 
-// RequestBody represents a request message in the OCPP server.
+// represents a request message in the OCPP server.
 type RequestBody struct {
     MessageType MessageType                 // 2
     MessageId   string                      // UUID
     Action      ActionType                  // e.g. Heartbeat
     Payload     []byte                      // e.g. interface{}
 }
-// ConfirmationBody represents a confirmation message in the OCPP server.
+// represents a confirmation message in the OCPP server.
 type ConfirmationBody struct {
     MessageType MessageType                 // 3
     MessageId   string                      // UUID
     Payload     []byte                      // e.g. interface{}
 }
 
-// RequestState represents the state of a request in the OCPP server.
-type RequestState struct {
-    Type MessageType    // 2
-    Id   string         // UUID
-    Action ActionType  // e.g. Heartbeat 
+type Pair struct {
+    Request      RequestBody
+    Confirmation *ConfirmationBody // nil until confirmation arrives
 }
 
-// State holds the current state of the OCPP server.
+// holds the current state of the OCPP server.
 type State struct {
-    RequestStates []RequestState
+    Pairs []Pair
 }
-// Append adds a new RequestState to the State if it doesn't already exist.
-func (s *State) Append(state RequestState) {
-    for _, existing := range s.RequestStates {
-        if existing.Id == state.Id {
-            return
+// adds a new RequestBody to State, unless a pair with the same MessageId already exists.
+func (s *State) AddRequest(req RequestBody) {
+    for _, pair := range s.Pairs {
+        if pair.Request.MessageId == req.MessageId {
+            return // already exists
         }
     }
-    s.RequestStates = append(s.RequestStates, state)
+    s.Pairs = append(s.Pairs, Pair{Request: req})
 }
-// FindId searches for a RequestState by its ID and returns it if found.
-func (s *State) FindId(id string) (RequestState, error) {
-    for _, existing := range s.RequestStates {
-        if existing.Id == id {
-            return existing, nil
+// pairs a ConfirmationBody with its RequestBody by MessageId.
+func (s *State) AddConfirmation(conf ConfirmationBody) error {
+    for i, pair := range s.Pairs {
+        if pair.Request.MessageId == conf.MessageId {
+            s.Pairs[i].Confirmation = &conf
+            return nil
         }
     }
-    return RequestState{}, fmt.Errorf("id %s not found", id)
+    return fmt.Errorf("no request found for confirmation id %s", conf.MessageId)
+}
+// returns the Pair for a given MessageId.
+func (s *State) FindById(id string) (*Pair, error) {
+    for i, pair := range s.Pairs {
+        if pair.Request.MessageId == id {
+            return &s.Pairs[i], nil
+        }
+    }
+    return nil, fmt.Errorf("id %s not found", id)
 }
