@@ -5,17 +5,16 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
-	"gopkg.in/go-playground/validator.v9"
+	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
 )
 
 // unmarshals a JSON payload into a struct of type T and validates it.
 func unmarshalAndValidate[T any](payload []byte) (*T, error) {
-    validate := validator.New()
     var obj T
     if err := json.Unmarshal(payload, &obj); err != nil {
         return nil, err
     }
-    if err := validate.Struct(obj); err != nil {
+    if err := types.Validate.Struct(obj); err != nil { 
         return nil, err
     }
     return &obj, nil

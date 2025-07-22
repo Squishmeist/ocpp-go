@@ -19,10 +19,11 @@ func (m MessageType) IsValid() bool {
 type ActionType string
 const (
     Heartbeat      ActionType = core.HeartbeatFeatureName
+    BootNotification ActionType = core.BootNotificationFeatureName
 )
 // checks if the ActionType is valid.
 func (a ActionType) IsValid() bool {
-    return a == Heartbeat
+    return a == Heartbeat || a == BootNotification
 }
 
 // represents a request message in the OCPP server.
