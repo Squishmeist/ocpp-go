@@ -1,9 +1,8 @@
-package main
+package client
 
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -14,7 +13,6 @@ import (
 	ocpp16 "github.com/lorenzodonini/ocpp-go/ocpp1.6"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/localauth"
-	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
 	"github.com/lorenzodonini/ocpp-go/ocppj"
 	"github.com/lorenzodonini/ocpp-go/ws"
 )
@@ -73,67 +71,13 @@ func setupTlsChargePoint(chargePointID string) ocpp16.ChargePoint {
 
 // exampleRoutine simulates a charge point flow, where
 func exampleRoutine(chargePoint ocpp16.ChargePoint, stateHandler *ChargePointHandler) {
-	dummyClientIdTag := "12345"
-	chargingConnector := 1
 	// Boot
 	bootConf, err := chargePoint.BootNotification("model1", "vendor1")
 	checkError(err)
 	logDefault(bootConf.GetFeatureName()).Infof("status: %v, interval: %v, current time: %v", bootConf.Status, bootConf.Interval, bootConf.CurrentTime.String())
-	// Notify connector status
-	updateStatus(stateHandler, 0, core.ChargePointStatusAvailable)
-	// Security event
-	_, err = chargePoint.SecurityEventNotification("Event", types.Now())
-	checkError(err)
 	// Send log notification
 	_, err = chargePoint.LogStatusNotification(logging.UploadLogStatusUploading, 1)
 	checkError(err)
-	// Request cert signing
-	certificate, err := chargePoint.SignCertificate("adsad")
-	checkError(err)
-	logDefault(certificate.GetFeatureName()).Infof("status: %v", certificate.Status)
-
-	// Wait for some time ...
-	time.Sleep(5 * time.Second)
-	// Simulate charging for connector 1
-	authConf, err := chargePoint.Authorize(dummyClientIdTag)
-	checkError(err)
-	logDefault(authConf.GetFeatureName()).Infof("status: %v %v", authConf.IdTagInfo.Status, getExpiryDate(authConf.IdTagInfo))
-	// Update connector status
-	updateStatus(stateHandler, chargingConnector, core.ChargePointStatusPreparing)
-	// Start transaction
-	startConf, err := chargePoint.StartTransaction(chargingConnector, dummyClientIdTag, stateHandler.meterValue, types.NewDateTime(time.Now()))
-	checkError(err)
-	logDefault(startConf.GetFeatureName()).Infof("status: %v, transaction %v %v", startConf.IdTagInfo.Status, startConf.TransactionId, getExpiryDate(startConf.IdTagInfo))
-	stateHandler.connectors[chargingConnector].currentTransaction = startConf.TransactionId
-	// Update connector status
-	updateStatus(stateHandler, chargingConnector, core.ChargePointStatusCharging)
-	// Periodically send meter values
-	for i := 0; i < 5; i++ {
-		sampleInterval, ok := stateHandler.configuration.getInt(MeterValueSampleInterval)
-		if !ok {
-			sampleInterval = 5
-		}
-		time.Sleep(time.Second * time.Duration(sampleInterval))
-		stateHandler.meterValue += 10
-		sampledValue := types.SampledValue{Value: fmt.Sprintf("%v", stateHandler.meterValue), Unit: types.UnitOfMeasureWh, Format: types.ValueFormatRaw, Measurand: types.MeasurandEnergyActiveExportRegister, Context: types.ReadingContextSamplePeriodic, Location: types.LocationOutlet}
-		meterValue := types.MeterValue{Timestamp: types.NewDateTime(time.Now()), SampledValue: []types.SampledValue{sampledValue}}
-		meterConf, err := chargePoint.MeterValues(chargingConnector, []types.MeterValue{meterValue})
-		checkError(err)
-		logDefault(meterConf.GetFeatureName()).Infof("sent updated %v", sampledValue.Measurand)
-	}
-	stateHandler.meterValue += 2
-	// Stop charging for connector 1
-	updateStatus(stateHandler, chargingConnector, core.ChargePointStatusFinishing)
-	stopConf, err := chargePoint.StopTransaction(stateHandler.meterValue, types.NewDateTime(time.Now()), startConf.TransactionId, func(request *core.StopTransactionRequest) {
-		sampledValue := types.SampledValue{Value: fmt.Sprintf("%v", stateHandler.meterValue), Unit: types.UnitOfMeasureWh, Format: types.ValueFormatRaw, Measurand: types.MeasurandEnergyActiveExportRegister, Context: types.ReadingContextSamplePeriodic, Location: types.LocationOutlet}
-		meterValue := types.MeterValue{Timestamp: types.NewDateTime(time.Now()), SampledValue: []types.SampledValue{sampledValue}}
-		request.TransactionData = []types.MeterValue{meterValue}
-		request.Reason = core.ReasonEVDisconnected
-	})
-	checkError(err)
-	logDefault(stopConf.GetFeatureName()).Infof("transaction %v stopped", startConf.TransactionId)
-	// Update connector status
-	updateStatus(stateHandler, chargingConnector, core.ChargePointStatusAvailable)
 	// Wait for some time ...
 	time.Sleep(5 * time.Minute)
 }
