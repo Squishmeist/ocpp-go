@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
 )
 
 func TestDeconstructBody(t *testing.T) {
@@ -18,7 +19,7 @@ func TestDeconstructBody(t *testing.T) {
         wantErr  bool
     }{
         {
-            name: "RequestBody (REQUEST)",
+            name: "RequestBody",
             input: []any{
                 2,
                 "uuid-123",
@@ -29,7 +30,7 @@ func TestDeconstructBody(t *testing.T) {
             wantErr:  false,
         },
         {
-            name: "ConfirmationBody (CONFIRMATION)",
+            name: "ConfirmationBody",
             input: []any{
                 3,
                 "uuid-456",
@@ -85,6 +86,78 @@ func TestDeconstructBody(t *testing.T) {
                 if _, ok := got.(ConfirmationBody); !ok {
                     t.Errorf("expected ConfirmationBody, got %T", got)
                 }
+            }
+        })
+    }
+}
+
+func TestUnmarshalAndValidate_HeartbeatConfirmation(t *testing.T) {
+    tests := []struct {
+        name    string
+        payload string
+        wantErr bool
+    }{
+        {
+            name:    "valid HeartbeatConfirmation",
+            payload: `{"currentTime":"2025-07-22T12:34:56Z"}`,
+            wantErr: false,
+        },
+        {
+            name:    "missing currentTime",
+            payload: `{}`,
+            wantErr: true,
+        },
+        {
+            name:    "invalid currentTime format",
+            payload: `{"currentTime":"not-a-date"}`,
+            wantErr: true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            _, err := unmarshalAndValidate[core.HeartbeatConfirmation]([]byte(tt.payload))
+            if tt.wantErr && err == nil {
+                t.Errorf("expected error, got nil")
+            }
+            if !tt.wantErr && err != nil {
+                t.Errorf("unexpected error: %v", err)
+            }
+        })
+    }
+}
+
+func TestUnmarshalAndValidate_BootNotificationConfirmation(t *testing.T) {
+    tests := []struct {
+        name    string
+        payload string
+        wantErr bool
+    }{
+        {
+            name:    "valid BootNotificationConfirmation",
+            payload: `{"status":"Accepted","currentTime":"2025-07-22T12:34:56Z"}`,
+            wantErr: false,
+        },
+        {
+            name:    "missing status",
+            payload: `{"currentTime":"2025-07-22T12:34:56Z"}`,
+            wantErr: true,
+        },
+        {
+            name:    "invalid currentTime format",
+            payload: `{"status":"Accepted","currentTime":"not-a-date"}`,
+            wantErr: true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            _, err := unmarshalAndValidate[core.BootNotificationConfirmation]([]byte(tt.payload))
+            if tt.wantErr && err == nil {
+                t.Errorf("expected error, got nil")
+            }
+            if !tt.wantErr && err != nil {
+                t.Errorf("unexpected error: %v", err)
             }
         })
     }

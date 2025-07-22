@@ -30,7 +30,6 @@ func topic(server *core.HttpServer, state *State) {
 			return ctx.String(http.StatusBadRequest, "Invalid request body")
 		}
 
-		// Process the body based on its type
 		switch body := body.(type) {
 		case RequestBody:
 			err := handleRequestBody(body, state)
