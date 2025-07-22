@@ -17,13 +17,13 @@ func NewServer() *core.HttpServer {
 			s.ServiceName = "ocpp-message-handler"
 		},
 	)
-	topic(server, state)
+	test(server, state)
 
 	return server
 }
 
-func topic(server *core.HttpServer, state *State) {
-	server.AddRoute(http.MethodPost, "/topic", func(ctx echo.Context) error {
+func test(server *core.HttpServer, state *State) {
+	server.AddRoute(http.MethodPost, "/test", func(ctx echo.Context) error {
 		body, err := deconstructBody(ctx)
 		if err != nil {
 			fmt.Println("Failed to deconstruct request body:", err)
