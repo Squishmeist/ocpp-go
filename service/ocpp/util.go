@@ -21,6 +21,28 @@ func tryUnmarshal[T any](payload []byte) (*T, error) {
     return &obj, nil
 }
 
+func detectOcppMessage(payload []byte) OcppMessage {
+    if conf, err := tryUnmarshal[core.HeartbeatConfirmation](payload); err == nil && conf.CurrentTime != nil {
+        return OcppMessage{Type: HeartbeatConfirmation, Data: conf}
+    }
+
+    if req, err := tryUnmarshal[core.HeartbeatRequest](payload); err == nil {
+        if string(payload) == "{}" || len(payload) == 0 {
+            return OcppMessage{Type: HeartbeatRequest, Data: req}
+        }
+    }
+
+    if bootReq, err := tryUnmarshal[core.BootNotificationRequest](payload); err == nil && bootReq.ChargePointModel != "" {
+        return OcppMessage{Type: BootNotificationRequest, Data: bootReq}
+    }
+
+    if bootConf, err := tryUnmarshal[core.BootNotificationConfirmation](payload); err == nil && bootConf.CurrentTime != nil {
+        return OcppMessage{Type: BootNotificationConfirmation, Data: bootConf}
+    }
+
+    return OcppMessage{Type: Unknown, Data: nil}
+}
+
 func handleMessage(body Body, log *logrus.Logger) error {
 	msg := detectOcppMessage([]byte(body.Payload))
 
@@ -61,24 +83,3 @@ func handleMessage(body Body, log *logrus.Logger) error {
 
 }
 
-func detectOcppMessage(payload []byte) OcppMessage {
-    if conf, err := tryUnmarshal[core.HeartbeatConfirmation](payload); err == nil && conf.CurrentTime != nil {
-        return OcppMessage{Type: HeartbeatConfirmation, Data: conf}
-    }
-
-    if req, err := tryUnmarshal[core.HeartbeatRequest](payload); err == nil {
-        if string(payload) == "{}" || len(payload) == 0 {
-            return OcppMessage{Type: HeartbeatRequest, Data: req}
-        }
-    }
-
-    if bootReq, err := tryUnmarshal[core.BootNotificationRequest](payload); err == nil && bootReq.ChargePointModel != "" {
-        return OcppMessage{Type: BootNotificationRequest, Data: bootReq}
-    }
-
-    if bootConf, err := tryUnmarshal[core.BootNotificationConfirmation](payload); err == nil && bootConf.CurrentTime != nil {
-        return OcppMessage{Type: BootNotificationConfirmation, Data: bootConf}
-    }
-
-    return OcppMessage{Type: Unknown, Data: nil}
-}
