@@ -1,65 +1,91 @@
 package ocpp
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
-	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
+	"github.com/labstack/echo/v4"
 )
 
-
-func TestUnmarshalAndValidate_HeartbeatConfirmation(t *testing.T) {
-    got, err := unmarshalAndValidate[core.HeartbeatConfirmation](
-        []byte(`{"currentTime":"2025-07-22T12:34:56Z"}`),
-    )
-    if err != nil {
-        t.Fatalf("unexpected error: %v", err)
+func TestDeconstructBody(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    []any
+        wantType any
+        wantErr  bool
+    }{
+        {
+            name: "RequestBody (REQUEST)",
+            input: []any{
+                2,
+                "uuid-123",
+                "Heartbeat",
+                map[string]any{},
+            },
+            wantType: RequestBody{},
+            wantErr:  false,
+        },
+        {
+            name: "ConfirmationBody (CONFIRMATION)",
+            input: []any{
+                3,
+                "uuid-456",
+                map[string]any{"currentTime": "2025-07-22T11:25:25.230Z"},
+            },
+            wantType: ConfirmationBody{},
+            wantErr:  false,
+        },
+        {
+            name: "Invalid type",
+            input: []any{
+                99,
+                "uuid-789",
+            },
+            wantType: nil,
+            wantErr:  true,
+        },
+        {
+            name: "Too few elements",
+            input: []any{
+                2,
+            },
+            wantType: nil,
+            wantErr:  true,
+        },
     }
 
-	want := "2025-07-22 12:34:56 +0000 UTC"
-    if got.CurrentTime.String() != want {
-        t.Errorf("unexpected currentTime: got %v, want %v", got.CurrentTime, want)
+    e := echo.New()
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            bodyBytes, _ := json.Marshal(tt.input)
+            req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(bodyBytes))
+            req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+            rec := httptest.NewRecorder()
+            ctx := e.NewContext(req, rec)
+
+            got, err := deconstructBody(ctx)
+            if tt.wantErr {
+                if err == nil {
+                    t.Errorf("expected error, got nil")
+                }
+                return
+            }
+            if err != nil {
+                t.Fatalf("unexpected error: %v", err)
+            }
+            switch tt.wantType.(type) {
+            case RequestBody:
+                if _, ok := got.(RequestBody); !ok {
+                    t.Errorf("expected RequestBody, got %T", got)
+                }
+            case ConfirmationBody:
+                if _, ok := got.(ConfirmationBody); !ok {
+                    t.Errorf("expected ConfirmationBody, got %T", got)
+                }
+            }
+        })
     }
 }
-
-func TestUnmarshalAndValidate_HeartbeatConfirmation2(t *testing.T) {
-    _, err := unmarshalAndValidate[core.HeartbeatConfirmation](
-        []byte(`{"unknown":"unknown"}`),
-    )
-	if err == nil {
-        t.Errorf("expected error, got nil")
-    }
-}
-
-func TestUnmarshalAndValidate_HeartbeatConfirmation3(t *testing.T) {
-    _, err := unmarshalAndValidate[core.HeartbeatConfirmation](
-        []byte(`{"currentTime":"unknown"}`),
-    )
-	if err == nil {
-        t.Errorf("expected error, got nil")
-    }
-}
-
-func TestAsType_HeartbeatConfirmation(t *testing.T) {
-    got, ok := asType[core.HeartbeatConfirmation](&core.HeartbeatConfirmation{
-        CurrentTime: types.NewDateTime(time.Date(2025, 7, 22, 12, 34, 56, 0, time.UTC)),
-    })
-	if !ok {
-		t.Error("Failed to cast to HeartbeatConfirmation")
-	}
-
-	want := "2025-07-22 12:34:56 +0000 UTC"
-    if got.CurrentTime.String() != want {
-        t.Errorf("unexpected currentTime: got %v, want %v", got.CurrentTime, want)
-    }
-}
-
-func TestAsType_HeartbeatConfirmation2(t *testing.T) {
-    // Pass a pointer to a value of a different type to test failed type assertion
-    _, ok := asType[core.HeartbeatConfirmation](new(string))
-    if ok {
-        t.Error("Expected failure casting to HeartbeatConfirmation, but got success")
-    }
-}
-

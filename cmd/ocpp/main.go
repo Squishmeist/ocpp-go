@@ -3,7 +3,6 @@ package main
 import (
 	"strconv"
 
-	"github.com/sirupsen/logrus"
 	"github.com/squishmeist/ocpp-go/service/ocpp"
 )
 
@@ -17,17 +16,9 @@ const (
 	envVarServerCertificateKey = "SERVER_CERTIFICATE_KEY_PATH"
 )
 
-var log *logrus.Logger
 
 func main() {
-	server := ocpp.NewServer(log)
-	log.Infof("starting server on port %v", defaultListenPort)
+	server := ocpp.NewServer()
 	server.Start(":" + strconv.Itoa(defaultListenPort))
 }
 
-func init() {
-	log = logrus.New()
-	log.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	// Set this to DebugLevel if you want to retrieve verbose logs from the ocppj and websocket layers
-	log.SetLevel(logrus.DebugLevel)
-}

@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
 )
 
 type HttpServer struct {
@@ -36,9 +35,9 @@ func (s *HttpServer) Start(port string) {
 		return c.String(http.StatusOK, fmt.Sprintf("Hello from %s", s.ServiceName))
 	})
 
-	log.Infof("server listening on %s", port)
+	fmt.Printf("server listening on %s\n", port)
 	if err := s.e.Start(port); err != nil && err != http.ErrServerClosed {
-		log.Errorf("failed to serve: %v", err)
+		fmt.Printf("failed to serve: %v\n", err)
 		panic(err)
 	}
 }
