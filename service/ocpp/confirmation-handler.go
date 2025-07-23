@@ -1,57 +1,117 @@
 package ocpp
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
-func handleConfirmationBody(body ConfirmationBody, state *State) error {
-	match, err := state.FindById(body.MessageId)
+func handleConfirmationBody(ctx context.Context, body ConfirmationBody, state *State) error {
+	tracer := otel.Tracer("ocpp-receiver")
+	ctx, span := tracer.Start(ctx, "handleConfirmationBody")
+	span.SetAttributes(
+		attribute.String("uuid", body.Uuid),
+		attribute.String("type", string(body.Type)),
+	)
+
+	match, err := state.FindByUuid(body.Uuid)
 	if err != nil {
-		return fmt.Errorf("RequestBody not found: %w", err)
+		message := "RequestBody not found"
+		span.RecordError(err)
+		span.SetStatus(codes.Error, message)
+		span.End()
+		return fmt.Errorf("%s: %w", message, err)
 	}
 
 	if match.Confirmation != nil {
-		return fmt.Errorf("confirmation already exists for MessageId: %s", body.MessageId)
+		message := "confirmation already exists for uuid"
+		span.RecordError(err)
+		span.SetStatus(codes.Error, message)
+		span.End()
+		return fmt.Errorf("%s: %w", message, err)
 	}
+
+	span.SetAttributes(
+		attribute.String("action", string(match.Request.Action)),
+	)
 
 	switch match.Request.Action {
 	case Heartbeat:
-		if err := heartbeatConfirmation(body.Payload); err != nil {
-			return fmt.Errorf("failed to handle Heartbeat confirmation: %w", err)
+		if err := heartbeatConfirmation(ctx, body.Payload); err != nil {
+			message := "Failed to handle Heartbeat confirmation"
+			span.RecordError(err)
+			span.SetStatus(codes.Error, message)
+			span.End()
+			return fmt.Errorf("%s: %w", message, err)
 		}
 	case BootNotification:
-		if err := bootnotificationConfirmation(body.Payload); err != nil {
-			return fmt.Errorf("failed to handle BootNotification confirmation: %w", err)
+		if err := bootnotificationConfirmation(ctx, body.Payload); err != nil {
+			message := "Failed to handle BootNotification confirmation"
+			span.RecordError(err)
+			span.SetStatus(codes.Error, message)
+			span.End()
+			return fmt.Errorf("%s: %w", message, err)
 		}
 	default:
-		return fmt.Errorf("unknown action for confirmation: %s", match.Request.Action)
+		slog.Error("Unknown action", "action", match.Request.Action)
+		span.SetStatus(codes.Error, "Unknown action")
+		span.End()
+		return fmt.Errorf("unknown action: %s", match.Request.Action)
 	}
 
 	state.AddConfirmation(ConfirmationBody{
-		MessageType: body.MessageType,
-		MessageId:   body.MessageId,
-		Payload:     body.Payload,
+		Type:    body.Type,
+		Uuid:    body.Uuid,
+		Payload: body.Payload,
 	})
 
+	span.End()
 	return nil
 }
 
-func heartbeatConfirmation(payload []byte) error {
+func heartbeatConfirmation(ctx context.Context, payload []byte) error {
+	tracer := otel.Tracer("ocpp-receiver.heartbeatRequest")
+	_, span := tracer.Start(ctx, "heartbeatRequest")
+	span.SetAttributes(
+		attribute.String("payload", string(payload)),
+	)
+
 	obj, err := unmarshalAndValidate[core.HeartbeatConfirmation](payload)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal HeartbeatConfirmation: %w", err)
+		message := "Failed to unmarshal HeartbeatConfirmation"
+		span.RecordError(err)
+		span.SetStatus(codes.Error, message)
+		span.End()
+		return fmt.Errorf("%s: %w", message, err)
 	}
-	fmt.Printf("HeartbeatConfirmation: %v\n", obj)
+
+	slog.Debug("HeartbeatConfirmation", "confirmation", obj)
+	span.End()
 	return nil
 }
 
-func bootnotificationConfirmation(payload []byte) error {
+func bootnotificationConfirmation(ctx context.Context, payload []byte) error {
+	tracer := otel.Tracer("ocpp-receiver.bootNotification")
+	_, span := tracer.Start(ctx, "bootNotification")
+	span.SetAttributes(
+		attribute.String("payload", string(payload)),
+	)
+
 	obj, err := unmarshalAndValidate[core.BootNotificationConfirmation](payload)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal BootNotificationConfirmation: %w", err)
+		message := "Failed to unmarshal BootNotificationConfirmation"
+		span.RecordError(err)
+		span.SetStatus(codes.Error, message)
+		span.End()
+		return fmt.Errorf("%s: %w", message, err)
 	}
-	fmt.Printf("BootNotificationConfirmation: %v\n", obj)
+
+	slog.Debug("BootNotificationConfirmation", "confirmation", obj)
+	span.End()
 	return nil
 }

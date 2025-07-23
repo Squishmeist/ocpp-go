@@ -8,9 +8,22 @@ import (
 )
 
 type AzureServiceBusClient struct {
-	Client      	 *azservicebus.Client
+	Client           *azservicebus.Client
 	ServiceName      string
 	connectionString string
+}
+
+func (c *AzureServiceBusClient) Validate() error {
+	if c.Client == nil {
+		return fmt.Errorf("missing required dependency: %s", "Client")
+	}
+	if c.ServiceName == "" {
+		return fmt.Errorf("missing required dependency: %s", "ServiceName")
+	}
+	if c.connectionString == "" {
+		return fmt.Errorf("missing required dependency: %s", "ConnectionString")
+	}
+	return nil
 }
 
 type AzureServiceBusOption func(*AzureServiceBusClient)
@@ -34,27 +47,27 @@ func NewAzureServiceBusClient(opts ...AzureServiceBusOption) (*AzureServiceBusCl
 		opt(azureServiceBusClient)
 	}
 
-	if azureServiceBusClient.connectionString == "" {
-        return nil, fmt.Errorf("connection string is required")
-    }
-
 	client, err := azservicebus.NewClientFromConnectionString(azureServiceBusClient.connectionString, nil)
 	if err != nil {
 		return nil, err
 	}
 	azureServiceBusClient.Client = client
 
+	if err := azureServiceBusClient.Validate(); err != nil {
+		return nil, fmt.Errorf("failed to validate AzureServiceBusClient: %w", err)
+	}
+
 	return azureServiceBusClient, nil
 }
 
 func (c *AzureServiceBusClient) Close(ctx context.Context) error {
-    return c.Client.Close(ctx)
+	return c.Client.Close(ctx)
 }
 
 func (c *AzureServiceBusClient) NewReceiverForSubscription(topicName, subscriptionName string, opts *azservicebus.ReceiverOptions) (*azservicebus.Receiver, error) {
-    return c.Client.NewReceiverForSubscription(topicName, subscriptionName, opts)
+	return c.Client.NewReceiverForSubscription(topicName, subscriptionName, opts)
 }
 
 func (c *AzureServiceBusClient) ReceiveMessages(ctx context.Context, receiver *azservicebus.Receiver) ([]*azservicebus.ReceivedMessage, error) {
-    return receiver.ReceiveMessages(ctx, 1, nil)
+	return receiver.ReceiveMessages(ctx, 1, nil)
 }
