@@ -6,5 +6,5 @@ ocpp:
 azure-service-bus:
 	docker compose -f ./service/azure-service-bus/docker-compose.yaml up -d
 
-azure:
-	go run -v ./cmd/azure-service-bus/main.go
+send-message:
+	go run -v ./cmd/azure-service-bus/main.go $(ARGS)
