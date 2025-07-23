@@ -13,8 +13,8 @@ const (
 	topicName        = "topic.1"
 	subscriptionName = "subscription.1"
 	endpoint         = "localhost:4318"
-	namespace        = "ocpp-go"
-	serviceName      = "OCPPService"
+	serviceName      = "ocpp-message-processor"
+	namespace        = "ocpp"
 	connectionString = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
 )
 
