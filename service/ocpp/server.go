@@ -2,7 +2,6 @@ package ocpp
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/squishmeist/ocpp-go/internal/core"
@@ -12,7 +11,7 @@ import (
 
 func Start(state *State, topicName, subscriptionName, connectionString string, tp *trace.TracerProvider) error {
     ctx := context.Background()
-    tracer := tp.Tracer("ocpp-listener")
+    tracer := tp.Tracer("ocpp-receiver")
 
     client, err := core.NewAzureServiceBusClient(
         core.WithAzureServiceBusServiceName("OCPPService"),
@@ -40,13 +39,15 @@ func Start(state *State, topicName, subscriptionName, connectionString string, t
         }
 
         for _, msg := range messages {
-            msgCtx, msgSpan := tracer.Start(ctx, "ProcessMessage")
-            fmt.Printf("Received message: %s\n", string(msg.Body))
-            // Use your existing deconstructBody logic, but adapt it to accept []byte
+            msgCtx, msgSpan := tracer.Start(ctx, "received-message")
+
+            slog.Info("Received message", "body", string(msg.Body))
+
             body, err := deconstructBody(msg.Body)
             if err != nil {
-                fmt.Println("Failed to deconstruct request body:", err)
-                receiver.AbandonMessage(ctx, msg, nil)
+                slog.Error("Failed to deconstruct request body:", "error", err)
+                receiver.AbandonMessage(msgCtx, msg, nil)
+                msgSpan.End()
                 continue
             }
 
@@ -54,19 +55,32 @@ func Start(state *State, topicName, subscriptionName, connectionString string, t
             case RequestBody:
                 err := handleRequestBody(body, state)
                 if err != nil {
-                    fmt.Println("Error handling RequestBody:", err)
+                    slog.Error("Error handling RequestBody:", "error", err)
+                    receiver.AbandonMessage(msgCtx, msg, nil)
+                    msgSpan.AddEvent("Error handling RequestBody")
+                    msgSpan.End()
+                    continue
                 }
             case ConfirmationBody:
                 err := handleConfirmationBody(body, state)
                 if err != nil {
-                    fmt.Println("Error handling ConfirmationBody:", err)
+                    slog.Error("Error handling ConfirmationBody:", "error", err)
+                    receiver.AbandonMessage(msgCtx, msg, nil)
+                    msgSpan.AddEvent("Error handling ConfirmationBody")
+                    msgSpan.End()
+                    continue
                 }
             default:
-                fmt.Println("Unknown body type")
+                slog.Warn("Unknown body type")
+                receiver.AbandonMessage(msgCtx, msg, nil)
+                msgSpan.AddEvent("Unknown body type")
+                msgSpan.End()
+                continue
             }
 
-            fmt.Println("State after processing: ", *state)
+            slog.Info("state after processing", "state", *state)
             receiver.CompleteMessage(msgCtx, msg, nil)
+            msgSpan.AddEvent("Message processed successfully")
             msgSpan.End()
         }
     }

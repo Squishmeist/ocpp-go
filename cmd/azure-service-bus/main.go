@@ -13,6 +13,8 @@ func main() {
     payload := `[2, "a9ea539a-e0b9-4d39-83e7-e40aa5b476d4", "Heartbeat", {}]`
 
     switch(args[0]) {
+    case "error":
+        payload = `[3, "a9ea539a-e0b9-4d39-83e7-e40aa5b476d4", { "currentTimee": "2025-07-22T11:25:25.230Z" }]`
     case "heartbeatrequest":
         payload = `[2, "a9ea539a-e0b9-4d39-83e7-e40aa5b476d4", "Heartbeat", {}]`
     case "heartbeatconfirmation":
