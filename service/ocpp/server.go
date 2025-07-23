@@ -2,6 +2,7 @@ package ocpp
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/squishmeist/ocpp-go/internal/core"
@@ -55,40 +56,36 @@ func Start(state *State, topicName, subscriptionName, connectionString string, t
 			if err != nil {
 				message := "Failed to deconstruct request body"
 				slog.Error(message, "error", err)
+				receiver.AbandonMessage(ctx, msg, nil)
 				span.RecordError(err)
 				span.SetStatus(codes.Error, message)
-				receiver.AbandonMessage(ctx, msg, nil)
 				span.End()
 				continue
 			}
 
-			switch body := body.(type) {
+			var (
+				processErr error
+				message    string
+			)
+
+			switch b := body.(type) {
 			case RequestBody:
-				err := handleRequestBody(ctx, body, state)
-				if err != nil {
-					message := "Error handling RequestBody"
-					slog.Error(message, "error", err)
-					span.RecordError(err)
-					span.SetStatus(codes.Error, message)
-					receiver.AbandonMessage(ctx, msg, nil)
-					span.End()
-					continue
-				}
+				processErr = handleRequestBody(ctx, b, state)
+				message = "Error handling RequestBody"
 			case ConfirmationBody:
-				err := handleConfirmationBody(ctx, body, state)
-				if err != nil {
-					message := "Error handling ConfirmationBody"
-					slog.Error(message, "error", err)
-					span.RecordError(err)
-					span.SetStatus(codes.Error, message)
-					receiver.AbandonMessage(ctx, msg, nil)
-					span.End()
-					continue
-				}
+				processErr = handleConfirmationBody(ctx, b, state)
+				message = "Error handling ConfirmationBody"
 			default:
-				slog.Warn("Unknown body type")
-				span.SetStatus(codes.Error, "Unknown body type")
+				processErr = fmt.Errorf("unknown body type")
+				message = "Unknown body type"
+				slog.Warn(message)
+			}
+
+			if processErr != nil {
 				receiver.AbandonMessage(ctx, msg, nil)
+				slog.Error(message, "error", processErr)
+				span.RecordError(processErr)
+				span.SetStatus(codes.Error, message)
 				span.End()
 				continue
 			}

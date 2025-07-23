@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
+	"github.com/squishmeist/ocpp-go/internal/core/util"
 )
 
 func TestDeconstructBody(t *testing.T) {
@@ -118,7 +119,7 @@ func TestUnmarshalAndValidate_HeartbeatConfirmation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := unmarshalAndValidate[core.HeartbeatConfirmation]([]byte(tt.payload))
+			_, err := util.UnmarshalAndValidate[core.HeartbeatConfirmation]([]byte(tt.payload))
 			if tt.wantErr && err == nil {
 				t.Errorf("expected error, got nil")
 			}
@@ -154,7 +155,7 @@ func TestUnmarshalAndValidate_BootNotificationConfirmation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := unmarshalAndValidate[core.BootNotificationConfirmation]([]byte(tt.payload))
+			_, err := util.UnmarshalAndValidate[core.BootNotificationConfirmation]([]byte(tt.payload))
 			if tt.wantErr && err == nil {
 				t.Errorf("expected error, got nil")
 			}

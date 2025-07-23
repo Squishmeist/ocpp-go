@@ -77,11 +77,11 @@ func (s *State) AddConfirmation(conf ConfirmationBody) error {
 }
 
 // returns the Pair for a given Uuid.
-func (s *State) FindByUuid(id string) (*Pair, error) {
+func (s *State) FindByUuid(uuid string) (*Pair, error) {
 	for i, pair := range s.Pairs {
-		if pair.Request.Uuid == id {
+		if pair.Request.Uuid == uuid {
 			return &s.Pairs[i], nil
 		}
 	}
-	return nil, fmt.Errorf("id %s not found", id)
+	return nil, fmt.Errorf("uuid %s not found", uuid)
 }
