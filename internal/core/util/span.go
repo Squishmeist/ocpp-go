@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func JustErrWithSpan2(span trace.Span, msg string, err error) error {
+func JustErrWithSpan(span trace.Span, msg string, err error) error {
 	span.RecordError(err)
 	span.SetStatus(codes.Error, msg)
 	span.End()

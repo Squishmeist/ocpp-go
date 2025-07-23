@@ -2,13 +2,11 @@ package ocpp
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
 	"github.com/squishmeist/ocpp-go/internal/core/util"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -37,7 +35,7 @@ func (h HeartbeatRequestHandler) Handle(props RequestHandlerProps) error {
 
 	obj, err := util.UnmarshalAndValidate[core.HeartbeatRequest](body.Payload)
 	if err != nil {
-		return util.JustErrWithSpan2(span, "Failed to unmarshal HeartbeatRequest", err)
+		return util.JustErrWithSpan(span, "Failed to unmarshal HeartbeatRequest", err)
 	}
 
 	slog.Debug("HeartbeatRequest", "request", obj)
@@ -61,11 +59,7 @@ func (h BootNotificationRequestHandler) Handle(props RequestHandlerProps) error 
 
 	obj, err := util.UnmarshalAndValidate[core.BootNotificationRequest](body.Payload)
 	if err != nil {
-		message := "Failed to unmarshal BootNotificationRequest"
-		span.RecordError(err)
-		span.SetStatus(codes.Error, message)
-		span.End()
-		return fmt.Errorf("%s: %w", message, err)
+		return util.JustErrWithSpan(span, "Failed to unmarshal BootNotificationRequest", err)
 	}
 
 	slog.Debug("BootNotificationRequest", "request", obj)

@@ -24,7 +24,6 @@ type HeartbeatConfirmationHandler struct{}
 
 func (h HeartbeatConfirmationHandler) Handle(props ConfirmationHandlerProps) error {
 	ctx, body, tracer := props.ctx, props.body, props.tracer
-
 	_, span := tracer.Start(ctx, string(Heartbeat), trace.WithAttributes(
 		attribute.String("uuid", string(body.Uuid)),
 		attribute.String("type", string(body.Type)),
@@ -34,7 +33,7 @@ func (h HeartbeatConfirmationHandler) Handle(props ConfirmationHandlerProps) err
 
 	obj, err := util.UnmarshalAndValidate[core.HeartbeatConfirmation](body.Payload)
 	if err != nil {
-		return util.JustErrWithSpan2(span, "Failed to unmarshal HeartbeatConfirmation", err)
+		return util.JustErrWithSpan(span, "Failed to unmarshal HeartbeatConfirmation", err)
 	}
 
 	slog.Debug("HeartbeatConfirmation", "confirmation", obj)
@@ -60,7 +59,7 @@ func (h BootNotificationConfirmationHandler) Handle(props ConfirmationHandlerPro
 
 	obj, err := util.UnmarshalAndValidate[core.BootNotificationConfirmation](body.Payload)
 	if err != nil {
-		return util.JustErrWithSpan2(span, "Failed to unmarshal BootNotificationConfirmation", err)
+		return util.JustErrWithSpan(span, "Failed to unmarshal BootNotificationConfirmation", err)
 	}
 
 	slog.Debug("BootNotificationConfirmation", "confirmation", obj)

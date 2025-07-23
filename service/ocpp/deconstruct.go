@@ -89,7 +89,7 @@ func deconstructConfirmationBody(ctx context.Context, uuid string, arr []any) (C
 }
 
 // deconstructs a body from a byte slice into a specific structure based on the message type.
-func deconstructBody(ctx context.Context, data []byte) (any, error) {
+func deconstructBody(ctx context.Context, body []byte) (any, error) {
 	tracer := otel.Tracer("ocpp-receiver")
 	ctx, span := tracer.Start(ctx, "deconstructBody")
 	defer span.End()
@@ -99,7 +99,7 @@ func deconstructBody(ctx context.Context, data []byte) (any, error) {
 	}
 
 	var arr []any
-	if err := json.Unmarshal(data, &arr); err != nil {
+	if err := json.Unmarshal(body, &arr); err != nil {
 		return errored("Failed to unmarshal request body", err)
 	}
 	if len(arr) < 2 {
