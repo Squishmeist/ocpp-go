@@ -76,8 +76,7 @@ func TestDeconstructBody(t *testing.T) {
 				if !ok {
 					t.Errorf("expected RequestBody, got %T", got)
 				}
-				// Check that Payload is []byte
-				if rb.Payload == nil || len(rb.Payload) == 0 {
+				if len(rb.Payload) == 0 {
 					t.Errorf("expected non-empty Payload []byte, got %v", rb.Payload)
 				}
 			case ConfirmationBody:
@@ -85,8 +84,7 @@ func TestDeconstructBody(t *testing.T) {
 				if !ok {
 					t.Errorf("expected ConfirmationBody, got %T", got)
 				}
-				// Check that Payload is []byte
-				if cb.Payload == nil || len(cb.Payload) == 0 {
+				if len(cb.Payload) == 0 {
 					t.Errorf("expected non-empty Payload []byte, got %v", cb.Payload)
 				}
 			}

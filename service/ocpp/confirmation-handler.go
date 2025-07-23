@@ -2,54 +2,42 @@ package ocpp
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
 	"github.com/squishmeist/ocpp-go/internal/core/util"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func handleConfirmationBody(ctx context.Context, body ConfirmationBody, state *State) error {
-	tracer := otel.Tracer("ocpp-receiver")
-	ctx, span := tracer.Start(ctx, "handleConfirmationBody", trace.WithAttributes(
-		attribute.String("uuid", body.Uuid),
+type ConfirmationHandlerProps struct {
+	ctx    context.Context
+	body   ConfirmationBody
+	tracer trace.Tracer
+}
+
+type ConfirmationHandler interface {
+	Handle(ConfirmationHandlerProps) error
+}
+
+type HeartbeatConfirmationHandler struct{}
+
+func (h HeartbeatConfirmationHandler) Handle(props ConfirmationHandlerProps) error {
+	ctx, body, tracer := props.ctx, props.body, props.tracer
+
+	_, span := tracer.Start(ctx, string(Heartbeat), trace.WithAttributes(
+		attribute.String("uuid", string(body.Uuid)),
 		attribute.String("type", string(body.Type)),
+		attribute.String("payload", string(body.Payload)),
 	))
 	defer span.End()
 
-	errored := func(msg string, err error) error {
-		return util.JustErrWithSpan2(span, msg, err)
-	}
-
-	match, err := state.FindByUuid(body.Uuid)
+	obj, err := util.UnmarshalAndValidate[core.HeartbeatConfirmation](body.Payload)
 	if err != nil {
-		return errored("RequestBody:", err)
-	}
-	if match.Confirmation != nil {
-		return errored("confirmation already exists for uuid", fmt.Errorf("confirmation already exists for uuid: %s", body.Uuid))
+		return util.JustErrWithSpan2(span, "Failed to unmarshal HeartbeatConfirmation", err)
 	}
 
-	span.SetAttributes(
-		attribute.String("action", string(match.Request.Action)),
-	)
-
-	switch match.Request.Action {
-	case Heartbeat:
-		if err := heartbeatConfirmation(ctx, body.Payload); err != nil {
-			return errored("Failed to handle Heartbeat confirmation", err)
-		}
-	case BootNotification:
-		if err := bootnotificationConfirmation(ctx, body.Payload); err != nil {
-			return errored("Failed to handle BootNotification confirmation", err)
-		}
-	default:
-		slog.Error("Unknown action", "action", match.Request.Action)
-		return errored("Unknown action", fmt.Errorf("unknown action: %s", match.Request.Action))
-	}
-
+	slog.Debug("HeartbeatConfirmation", "confirmation", obj)
 	state.AddConfirmation(ConfirmationBody{
 		Type:    body.Type,
 		Uuid:    body.Uuid,
@@ -58,34 +46,47 @@ func handleConfirmationBody(ctx context.Context, body ConfirmationBody, state *S
 	return nil
 }
 
-func heartbeatConfirmation(ctx context.Context, payload []byte) error {
-	tracer := otel.Tracer("ocpp-receiver.heartbeatRequest")
-	_, span := tracer.Start(ctx, "heartbeatRequest", trace.WithAttributes(
-		attribute.String("payload", string(payload)),
+type BootNotificationConfirmationHandler struct{}
+
+func (h BootNotificationConfirmationHandler) Handle(props ConfirmationHandlerProps) error {
+	ctx, body, tracer := props.ctx, props.body, props.tracer
+
+	_, span := tracer.Start(ctx, string(BootNotification), trace.WithAttributes(
+		attribute.String("uuid", string(body.Uuid)),
+		attribute.String("type", string(body.Type)),
+		attribute.String("payload", string(body.Payload)),
 	))
 	defer span.End()
 
-	obj, err := util.UnmarshalAndValidate[core.HeartbeatConfirmation](payload)
-	if err != nil {
-		return util.JustErrWithSpan2(span, "Failed to unmarshal HeartbeatConfirmation", err)
-	}
-
-	slog.Debug("HeartbeatConfirmation", "confirmation", obj)
-	return nil
-}
-
-func bootnotificationConfirmation(ctx context.Context, payload []byte) error {
-	tracer := otel.Tracer("ocpp-receiver.bootNotification")
-	_, span := tracer.Start(ctx, "bootNotification", trace.WithAttributes(
-		attribute.String("payload", string(payload)),
-	))
-	defer span.End()
-
-	obj, err := util.UnmarshalAndValidate[core.BootNotificationConfirmation](payload)
+	obj, err := util.UnmarshalAndValidate[core.BootNotificationConfirmation](body.Payload)
 	if err != nil {
 		return util.JustErrWithSpan2(span, "Failed to unmarshal BootNotificationConfirmation", err)
 	}
 
 	slog.Debug("BootNotificationConfirmation", "confirmation", obj)
+	state.AddConfirmation(ConfirmationBody{
+		Type:    body.Type,
+		Uuid:    body.Uuid,
+		Payload: body.Payload,
+	})
 	return nil
+}
+
+var confirmationHandlers = map[ActionType]ConfirmationHandler{
+	Heartbeat:        HeartbeatConfirmationHandler{},
+	BootNotification: BootNotificationConfirmationHandler{},
+}
+
+func getConfirmationHandler(uuid string) (ConfirmationHandler, bool) {
+	match, err := state.FindByUuid(uuid)
+	if err != nil {
+		slog.Error("Failed to find request by UUID", "uuid", uuid, "error", err)
+		return nil, false
+	}
+	if match.Confirmation != nil {
+		slog.Error("Confirmation already exists for UUID", "uuid", uuid)
+		return nil, false
+	}
+	handler, ok := confirmationHandlers[match.Request.Action]
+	return handler, ok
 }

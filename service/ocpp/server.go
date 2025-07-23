@@ -8,10 +8,12 @@ import (
 	"github.com/squishmeist/ocpp-go/internal/core"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func Start(state *State, topicName, subscriptionName, connectionString string, tp *trace.TracerProvider) error {
+var state = &State{}
+
+func Start(topicName, subscriptionName, connectionString string, tp trace.TracerProvider) error {
 	tracer := tp.Tracer("ocpp-receiver")
 	ctx := context.Background()
 
@@ -44,50 +46,58 @@ func Start(state *State, topicName, subscriptionName, connectionString string, t
 		for _, msg := range messages {
 			slog.Info("Received message", "body", string(msg.Body))
 
-			ctx, span := tracer.Start(ctx, "processMessage")
-			span.SetAttributes(
+			ctx, span := tracer.Start(ctx, "processMessage", trace.WithAttributes(
 				attribute.String("id", msg.MessageID),
 				attribute.String("topic", topicName),
 				attribute.String("subscription", subscriptionName),
 				attribute.String("body", string(msg.Body)),
-			)
+			))
 
-			body, err := deconstructBody(ctx, msg.Body)
-			if err != nil {
-				message := "Failed to deconstruct request body"
-				slog.Error(message, "error", err)
+			errored := func(message string, err error) {
 				receiver.AbandonMessage(ctx, msg, nil)
+				slog.Error(message, "error", err)
 				span.RecordError(err)
 				span.SetStatus(codes.Error, message)
 				span.End()
-				continue
 			}
 
-			var (
-				processErr error
-				message    string
-			)
+			body, err := deconstructBody(ctx, msg.Body)
+			if err != nil {
+				errored("failed to deconstruct body", err)
+				continue
+			}
 
 			switch b := body.(type) {
 			case RequestBody:
-				processErr = handleRequestBody(ctx, b, state)
-				message = "Error handling RequestBody"
+				handler, ok := getRequestHandler(b.Action)
+				if !ok {
+					errored("unknown action", fmt.Errorf("unknown action: %s", b.Action))
+					continue
+				}
+				if err := handler.Handle(RequestHandlerProps{
+					ctx:    ctx,
+					body:   b,
+					tracer: tracer,
+				}); err != nil {
+					errored(fmt.Sprintf("failed to handle %s request", b.Action), err)
+					continue
+				}
 			case ConfirmationBody:
-				processErr = handleConfirmationBody(ctx, b, state)
-				message = "Error handling ConfirmationBody"
+				handler, ok := getConfirmationHandler(b.Uuid)
+				if !ok {
+					errored(fmt.Sprintf("unknown uuid: %s", b.Uuid), fmt.Errorf("unknown uuid: %s", b.Uuid))
+					continue
+				}
+				if err := handler.Handle(ConfirmationHandlerProps{
+					ctx:    ctx,
+					body:   b,
+					tracer: tracer,
+				}); err != nil {
+					errored(fmt.Sprintf("failed to handle %s confirmation", b.Uuid), err)
+					continue
+				}
 			default:
-				processErr = fmt.Errorf("unknown body type")
-				message = "Unknown body type"
-				slog.Warn(message)
-			}
-
-			if processErr != nil {
-				receiver.AbandonMessage(ctx, msg, nil)
-				slog.Error(message, "error", processErr)
-				span.RecordError(processErr)
-				span.SetStatus(codes.Error, message)
-				span.End()
-				continue
+				errored("unknown body type", fmt.Errorf("unknown body type"))
 			}
 
 			slog.Info("state after processing", "state", *state)

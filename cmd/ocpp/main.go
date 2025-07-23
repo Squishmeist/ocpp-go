@@ -18,10 +18,9 @@ const (
 	connectionString = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
 )
 
-
 func main() {
 	logging.SetupLogger(logging.LevelDebug, logging.LogEnvDevelopment)
-	
+
 	t := core.NewTelemeter(serviceName, endpoint, namespace)
 	tp := t.NewTracerProvider()
 	defer func() {
@@ -30,11 +29,8 @@ func main() {
 		}
 	}()
 
-	state := &ocpp.State{}
-
-	err := ocpp.Start(state, topicName, subscriptionName, connectionString, tp)
+	err := ocpp.Start(topicName, subscriptionName, connectionString, tp)
 	if err != nil {
 		panic(err)
 	}
 }
-
