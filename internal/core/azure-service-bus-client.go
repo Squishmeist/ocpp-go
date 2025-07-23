@@ -8,8 +8,8 @@ import (
 )
 
 type AzureServiceBusClient struct {
-	Client      *azservicebus.Client
-	ServiceName string
+	Client      	 *azservicebus.Client
+	ServiceName      string
 	connectionString string
 }
 

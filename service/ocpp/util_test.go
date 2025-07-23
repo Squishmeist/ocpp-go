@@ -1,13 +1,9 @@
 package ocpp
 
 import (
-	"bytes"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
 )
 
@@ -58,16 +54,10 @@ func TestDeconstructBody(t *testing.T) {
         },
     }
 
-    e := echo.New()
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             bodyBytes, _ := json.Marshal(tt.input)
-            req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(bodyBytes))
-            req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-            rec := httptest.NewRecorder()
-            ctx := e.NewContext(req, rec)
-
-            got, err := deconstructBody(ctx)
+            got, err := deconstructBody(bodyBytes)
             if tt.wantErr {
                 if err == nil {
                     t.Errorf("expected error, got nil")
@@ -79,12 +69,22 @@ func TestDeconstructBody(t *testing.T) {
             }
             switch tt.wantType.(type) {
             case RequestBody:
-                if _, ok := got.(RequestBody); !ok {
+                rb, ok := got.(RequestBody)
+                if !ok {
                     t.Errorf("expected RequestBody, got %T", got)
                 }
+                // Check that Payload is []byte
+                if rb.Payload == nil || len(rb.Payload) == 0 {
+                    t.Errorf("expected non-empty Payload []byte, got %v", rb.Payload)
+                }
             case ConfirmationBody:
-                if _, ok := got.(ConfirmationBody); !ok {
+                cb, ok := got.(ConfirmationBody)
+                if !ok {
                     t.Errorf("expected ConfirmationBody, got %T", got)
+                }
+                // Check that Payload is []byte
+                if cb.Payload == nil || len(cb.Payload) == 0 {
+                    t.Errorf("expected non-empty Payload []byte, got %v", cb.Payload)
                 }
             }
         })

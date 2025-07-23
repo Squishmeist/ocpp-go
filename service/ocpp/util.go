@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/labstack/echo/v4"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
 )
 
@@ -66,33 +65,32 @@ func deconstructConfirmationBody(id string, arr []any) (ConfirmationBody, error)
     }, nil
 }
 
-// deconstructs the context body into a specific structure based on the message type.
-func deconstructBody(ctx echo.Context) (any, error) {
-	var arr []any
-	if err := json.NewDecoder(ctx.Request().Body).Decode(&arr); err != nil {
-		return nil, fmt.Errorf("failed to decode request body: %w", err)
-	}
-
-	if len(arr) < 2 {
-		return nil, fmt.Errorf("expected at least 2 elements, got %d", len(arr))
-	}
-
-    bodyType, ok := arr[0].(float64)
-    if !ok {
-        return nil, fmt.Errorf("expected type to be float64, got %T", arr[0])
+// deconstructs a body from a byte slice into a specific structure based on the message type.
+func deconstructBody(data []byte) (any, error) {
+    var arr []any
+    if err := json.Unmarshal(data, &arr); err != nil {
+        return nil, err
     }
-    bodyId, ok := arr[1].(string)
+    if len(arr) < 2 {
+        return nil, fmt.Errorf("invalid message format")
+    }
+    msgType, ok := arr[0].(float64)
     if !ok {
-        return nil, fmt.Errorf("expected ID to be string, got %T", arr[1])
+        return nil, fmt.Errorf("invalid message type")
     }
 
-    switch int(bodyType) {
+    id, ok := arr[1].(string)
+    if !ok {
+        return nil, fmt.Errorf("invalid message id")
+    }
+
+    switch int(msgType) {
     case 2:
-        return deconstructRequestBody(bodyId, arr)
+        return deconstructRequestBody(id, arr)
     case 3:
-        return deconstructConfirmationBody(bodyId, arr)
+        return deconstructConfirmationBody(id, arr)
     default:
-        return nil, fmt.Errorf("unsupported message type: %v", bodyType)
+        return nil, fmt.Errorf("unknown message type")
     }
 }
 

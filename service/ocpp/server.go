@@ -2,45 +2,48 @@ package ocpp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"time"
+	"log/slog"
 
 	"github.com/squishmeist/ocpp-go/internal/core"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 
-func Start(state *State, topicName, subscriptionName string) error {
+func Start(state *State, topicName, subscriptionName, connectionString string, tp *trace.TracerProvider) error {
     ctx := context.Background()
-	connStr := "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+    tracer := tp.Tracer("ocpp-listener")
 
     client, err := core.NewAzureServiceBusClient(
         core.WithAzureServiceBusServiceName("OCPPService"),
-        core.WithAzureServiceBusConnectionString(connStr),
+        core.WithAzureServiceBusConnectionString(connectionString),
     )
     if err != nil {
-        return fmt.Errorf("failed to create service bus client: %w", err)
+        slog.Error("Failed to create Azure Service Bus client", "error", err)
+        panic(err)
     }
     defer client.Close(ctx)
 
     receiver, err := client.NewReceiverForSubscription(topicName, subscriptionName, nil)
     if err != nil {
-        return fmt.Errorf("failed to create receiver: %w", err)
+        slog.Error("Failed to create receiver", "error", err)
+        panic(err)
     }
     defer receiver.Close(ctx)
+    slog.Info("Receiver created successfully", "topic", topicName, "subscription", subscriptionName)
 
-    fmt.Printf("Listening to topic '%s' subscription '%s'...\n", topicName, subscriptionName)
     for {
         messages, err := client.ReceiveMessages(ctx, receiver)
         if err != nil {
-            fmt.Printf("Error receiving messages: %v\n", err)
-            time.Sleep(2 * time.Second)
+            slog.Error("Failed to receive messages", "error", err)
             continue
         }
+
         for _, msg := range messages {
+            msgCtx, msgSpan := tracer.Start(ctx, "ProcessMessage")
             fmt.Printf("Received message: %s\n", string(msg.Body))
             // Use your existing deconstructBody logic, but adapt it to accept []byte
-            body, err := deconstructBodyFromBytes(msg.Body)
+            body, err := deconstructBody(msg.Body)
             if err != nil {
                 fmt.Println("Failed to deconstruct request body:", err)
                 receiver.AbandonMessage(ctx, msg, nil)
@@ -63,34 +66,9 @@ func Start(state *State, topicName, subscriptionName string) error {
             }
 
             fmt.Println("State after processing: ", *state)
-            receiver.CompleteMessage(context.Background(), msg, nil)
+            receiver.CompleteMessage(msgCtx, msg, nil)
+            msgSpan.End()
         }
     }
 }
 
-func deconstructBodyFromBytes(data []byte) (any, error) {
-    // Example: unmarshal as []any, then route to deconstructRequestBody or deconstructConfirmationBody
-    var arr []any
-    if err := json.Unmarshal(data, &arr); err != nil {
-        return nil, err
-    }
-    if len(arr) < 2 {
-        return nil, fmt.Errorf("invalid message format")
-    }
-    msgType, ok := arr[0].(float64)
-    if !ok {
-        return nil, fmt.Errorf("invalid message type")
-    }
-    id, ok := arr[1].(string)
-    if !ok {
-        return nil, fmt.Errorf("invalid message id")
-    }
-    switch int(msgType) {
-    case 2:
-        return deconstructRequestBody(id, arr)
-    case 3:
-        return deconstructConfirmationBody(id, arr)
-    default:
-        return nil, fmt.Errorf("unknown message type")
-    }
-}
