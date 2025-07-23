@@ -6,14 +6,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
+	"github.com/squishmeist/ocpp-go/internal/core"
 )
 
 
-func ListenToTopicAndProcess(state *State, topicName, subscriptionName string) error {
+func Start(state *State, topicName, subscriptionName string) error {
     ctx := context.Background()
 	connStr := "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
-    client, err := azservicebus.NewClientFromConnectionString(connStr, nil)
+
+    client, err := core.NewAzureServiceBusClient(
+        core.WithAzureServiceBusServiceName("OCPPService"),
+        core.WithAzureServiceBusConnectionString(connStr),
+    )
     if err != nil {
         return fmt.Errorf("failed to create service bus client: %w", err)
     }
@@ -27,7 +31,7 @@ func ListenToTopicAndProcess(state *State, topicName, subscriptionName string) e
 
     fmt.Printf("Listening to topic '%s' subscription '%s'...\n", topicName, subscriptionName)
     for {
-        messages, err := receiver.ReceiveMessages(ctx, 1, nil)
+        messages, err := client.ReceiveMessages(ctx, receiver)
         if err != nil {
             fmt.Printf("Error receiving messages: %v\n", err)
             time.Sleep(2 * time.Second)

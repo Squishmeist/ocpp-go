@@ -9,9 +9,9 @@ const (
 
 
 func main() {
-state := &ocpp.State{}
-err := ocpp.ListenToTopicAndProcess(state, topicName, subscriptionName)
-if err != nil {
-    panic(err)
-}
+	state := &ocpp.State{}
+	err := ocpp.Start(state, topicName, subscriptionName)
+	if err != nil {
+		panic(err)
+	}
 }

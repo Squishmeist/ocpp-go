@@ -17,6 +17,12 @@ type HttpServer struct {
 
 type Option func(*HttpServer)
 
+func WithServiceName(serviceName string) Option {
+	return func(s *HttpServer) {
+		s.ServiceName = serviceName
+	}
+}
+
 func NewHttpServer(opts ...Option) *HttpServer {
 	server := &HttpServer{
 		e: echo.New(),
