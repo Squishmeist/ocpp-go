@@ -69,14 +69,12 @@ OCPP messages are handled as arrays, mapped to these Go structs:
 
 ```go
 type RequestBody struct {
-    MessageType MessageType // 2
     MessageId   string      // UUID
-    Action      ActionType  // e.g. Heartbeat
+    Action      ActionKind  // e.g. Heartbeat
     Payload     []byte      // JSON-encoded payload
 }
 
 type ConfirmationBody struct {
-    MessageType MessageType // 3
     MessageId   string      // UUID
     Payload     []byte      // JSON-encoded payload
 }
