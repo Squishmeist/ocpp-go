@@ -1,10 +1,14 @@
-.PHONY: azure-service-bus ocpp send-message dev
+.PHONY: azure-service-bus ocpp test send-message dev
 
 azure-service-bus:
 	docker compose -f ./azure-service-bus/docker-compose.yaml up -d
 
 ocpp:
 	go run -v ./cmd/ocpp/main.go
+
+test:
+	go clean -testcache
+	go test ./... -v
 
 send-message:
 	go run -v ./cmd/azure-service-bus/main.go $(ARGS)

@@ -246,9 +246,31 @@ func (o *OcppStateMachine) HandleHeartbeatConfirmation(ctx context.Context, payl
 }
 
 func (o *OcppStateMachine) HandleBootNotificationRequest(ctx context.Context, payload []byte) error {
+	var request m.BootNotificationRequest
+	if err := json.Unmarshal(payload, &request); err != nil {
+		return err
+	}
+	if err := t.Validate.Struct(request); err != nil {
+		return err
+	}
+
+	slog.Debug("Received BootNotification Request",
+		slog.Any("payload", request),
+	)
 	return nil
 }
 
 func (o *OcppStateMachine) HandleBootNotificationConfirmation(ctx context.Context, payload []byte) error {
+	var confirmation m.BootNotificationConfirmation
+	if err := json.Unmarshal(payload, &confirmation); err != nil {
+		return err
+	}
+	if err := t.Validate.Struct(confirmation); err != nil {
+		return err
+	}
+
+	slog.Debug("Received BootNotification Confirmation",
+		slog.Any("payload", confirmation),
+	)
 	return nil
 }
