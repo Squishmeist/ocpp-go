@@ -32,15 +32,13 @@ func (a ActionKind) IsValid() bool {
 
 // Represents a Request body in the OCPP.
 type RequestBody struct {
-	Type    MessageKind // request or confirmation
-	Uuid    string      // UUID
-	Action  ActionKind  // e.g. Heartbeat
+	Uuid    string     // UUID
+	Action  ActionKind // e.g. Heartbeat
 	Payload []byte
 }
 
 // Represents a confirmation body in the OCPP.
 type ConfirmationBody struct {
-	Type    MessageKind // confirmation
-	Uuid    string      // UUID
-	Payload []byte      // e.g. interface{}
+	Uuid    string // UUID
+	Payload []byte // e.g. interface{}
 }

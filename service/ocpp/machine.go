@@ -42,9 +42,24 @@ func (o *OcppStateMachine) HandleMessage(ctx context.Context, msg []byte) error 
 
 		switch parsedMsg.kind {
 		case t.Request:
-			return o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload)
+			if err := o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload); err != nil {
+				return err
+			}
+			state.AddRequest(t.RequestBody{
+				Action:  *parsedMsg.action,
+				Uuid:    parsedMsg.uuid,
+				Payload: parsedMsg.payload,
+			})
+			return nil
 		case t.Confirmation:
-			return o.handleConfirmation(ctx, parsedMsg.uuid, parsedMsg.payload)
+			if err := o.handleConfirmation(ctx, parsedMsg.uuid, parsedMsg.payload); err != nil {
+				return err
+			}
+			state.AddConfirmation(t.ConfirmationBody{
+				Uuid:    parsedMsg.uuid,
+				Payload: parsedMsg.payload,
+			})
+			return nil
 		default:
 			return fmt.Errorf("unknown message type")
 		}
@@ -127,7 +142,6 @@ func (o *OcppStateMachine) parseRequestBody(uuid string, arr []any) (t.RequestBo
 	}
 
 	return t.RequestBody{
-		Type:    "request",
 		Uuid:    uuid,
 		Action:  action,
 		Payload: payload,
@@ -146,7 +160,6 @@ func (o *OcppStateMachine) parseConfirmationBody(uuid string, arr []any) (t.Conf
 	}
 
 	return t.ConfirmationBody{
-		Type:    "confirmation",
 		Uuid:    uuid,
 		Payload: payload,
 	}, nil
@@ -232,10 +245,10 @@ func (o *OcppStateMachine) HandleHeartbeatConfirmation(ctx context.Context, payl
 	return nil
 }
 
-func (o *OcppStateMachine) HandleBootNotificationRequest(ctx context.Context, msg any) error {
+func (o *OcppStateMachine) HandleBootNotificationRequest(ctx context.Context, payload []byte) error {
 	return nil
 }
 
-func (o *OcppStateMachine) HandleBootNotificationConfirmation(ctx context.Context, msg any) error {
+func (o *OcppStateMachine) HandleBootNotificationConfirmation(ctx context.Context, payload []byte) error {
 	return nil
 }

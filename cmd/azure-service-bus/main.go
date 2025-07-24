@@ -13,7 +13,9 @@ func main() {
 	payload := `[2, "uuid-1", "Heartbeat", {}]`
 
 	switch args[0] {
-	case "error":
+	case "requesterror":
+		payload = `[2, "uuid-error", "Heartbeat", { "currentTimee": "2025-07-22T11:25:25.230Z" }]`
+	case "confirmationerror":
 		payload = `[3, "uuid-error", { "currentTimee": "2025-07-22T11:25:25.230Z" }]`
 	case "heartbeatrequest":
 		payload = `[2, "uuid-1", "Heartbeat", {}]`
