@@ -20,16 +20,17 @@ const (
 
 func main() {
 	logging.SetupLogger(logging.LevelDebug, logging.LogEnvDevelopment)
+	ctx := context.Background()
 
 	t := core.NewTelemeter(serviceName, endpoint, namespace)
 	tp := t.NewTracerProvider()
 	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
+		if err := tp.Shutdown(ctx); err != nil {
 			slog.Error("Failed to shutdown tracer provider", "error", err)
 		}
 	}()
 
-	err := ocpp.Start(topicName, subscriptionName, connectionString, tp)
+	err := ocpp.Start(ctx, topicName, subscriptionName, connectionString, tp)
 	if err != nil {
 		panic(err)
 	}

@@ -1,7 +1,7 @@
 .PHONY: azure-service-bus ocpp send-message dev
 
 azure-service-bus:
-	docker compose -f ./service/azure-service-bus/docker-compose.yaml up -d
+	docker compose -f ./azure-service-bus/docker-compose.yaml up -d
 
 ocpp:
 	go run -v ./cmd/ocpp/main.go
