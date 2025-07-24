@@ -79,7 +79,6 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
 		span.SetStatus(codes.Error, ctx.Err().Error())
 		return ctx.Err()
 	default:
-		span.AddEvent("pre-processing raw", trace.WithAttributes(attribute.String("message", string(msg))))
 		parsedMsg, err := o.parseRawMessage(msg)
 		if err != nil {
 			span.RecordError(err)
@@ -99,6 +98,10 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
 				Uuid:    parsedMsg.uuid,
 				Payload: parsedMsg.payload,
 			})
+			span.AddEvent("handled request", trace.WithAttributes(
+				attribute.String("action", string(*parsedMsg.action)),
+				attribute.String("uuid", parsedMsg.uuid),
+			))
 			return nil
 		case t.Confirmation:
 			if err := o.handleConfirmation(ctx, parsedMsg.uuid, parsedMsg.payload); err != nil {
@@ -108,6 +111,9 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
 				Uuid:    parsedMsg.uuid,
 				Payload: parsedMsg.payload,
 			})
+			span.AddEvent("handled confirmation", trace.WithAttributes(
+				attribute.String("uuid", parsedMsg.uuid),
+			))
 			return nil
 		default:
 			return fmt.Errorf("unknown message type")
