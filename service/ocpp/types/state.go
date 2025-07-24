@@ -34,7 +34,7 @@ func (s *State) AddConfirmation(conf ConfirmationBody) error {
 	return fmt.Errorf("no request found for confirmation id %s", conf.Uuid)
 }
 
-// Finds the Pair for a given Uuid.
+// Finds the Pair for a given UUID.
 func (s *State) FindByUuid(uuid string) (*Pair, error) {
 	for i, pair := range s.Pairs {
 		if pair.Request.Uuid == uuid {

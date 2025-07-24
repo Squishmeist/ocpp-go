@@ -5,13 +5,10 @@ import (
 	"log/slog"
 
 	"github.com/squishmeist/ocpp-go/internal/core"
-	t "github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
-
-var state = &t.State{}
 
 func Start(ctx context.Context, topicName, subscriptionName, connectionString string, tp trace.TracerProvider) error {
 	client, err := core.NewAzureServiceBusClient(
@@ -31,10 +28,10 @@ func Start(ctx context.Context, topicName, subscriptionName, connectionString st
 	}
 	defer receiver.Close(ctx)
 
-	machine := &OcppStateMachine{
-		TracerProvider: tp,
-	}
-	
+	machine := NewOcppMachine(
+		WithTracerProvider(tp),
+	)
+
 	slog.Info("Receiver created successfully", "topic", topicName, "subscription", subscriptionName)
 
 	for {
@@ -66,7 +63,7 @@ func Start(ctx context.Context, topicName, subscriptionName, connectionString st
 				continue
 			}
 
-			slog.Info("state after processing", "state", *state)
+			slog.Info("state after processing", "state", *machine.state)
 			span.SetStatus(codes.Ok, "Message processed successfully")
 			span.End()
 			// TODO: dont use this in production, this is just for testing

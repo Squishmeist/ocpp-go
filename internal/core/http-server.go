@@ -15,17 +15,17 @@ type HttpServer struct {
 	routeLock   sync.Mutex
 }
 
-type Option func(*HttpServer)
+type HttpOption func(*HttpServer)
 
-func WithServiceName(serviceName string) Option {
+func WithServiceName(serviceName string) HttpOption {
 	return func(s *HttpServer) {
 		s.ServiceName = serviceName
 	}
 }
 
-func NewHttpServer(opts ...Option) *HttpServer {
+func NewHttpServer(opts ...HttpOption) *HttpServer {
 	server := &HttpServer{
-		e: echo.New(),
+		e:         echo.New(),
 		routeLock: sync.Mutex{},
 	}
 

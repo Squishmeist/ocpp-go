@@ -7,10 +7,13 @@ import (
 
 	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestParseRawMessage(t *testing.T) {
-	machine := &OcppStateMachine{}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+	)
 
 	t.Run("InvalidJSON", func(t *testing.T) {
 		raw := []byte(`not a json array`)
@@ -77,7 +80,9 @@ func TestParseRawMessage(t *testing.T) {
 }
 
 func TestHandleRequest(t *testing.T) {
-	machine := &OcppStateMachine{}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+	)
 	ctx := context.Background()
 
 	t.Run("UnknownAction", func(t *testing.T) {
@@ -107,7 +112,9 @@ func TestHandleRequest(t *testing.T) {
 }
 
 func TestHandleHeartbeatRequest(t *testing.T) {
-	machine := &OcppStateMachine{}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+	)
 	ctx := context.Background()
 
 	t.Run("ValidPayload", func(t *testing.T) {
@@ -117,7 +124,9 @@ func TestHandleHeartbeatRequest(t *testing.T) {
 }
 
 func TestHandleHeartbeatConfirmation(t *testing.T) {
-	machine := &OcppStateMachine{}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+	)
 	ctx := context.Background()
 
 	t.Run("InvalidPayload", func(t *testing.T) {
@@ -132,7 +141,9 @@ func TestHandleHeartbeatConfirmation(t *testing.T) {
 }
 
 func TestHandleBootNotificationRequest(t *testing.T) {
-	machine := &OcppStateMachine{}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+	)
 	ctx := context.Background()
 
 	t.Run("InvalidPayload", func(t *testing.T) {
@@ -157,7 +168,9 @@ func TestHandleBootNotificationRequest(t *testing.T) {
 }
 
 func TestHandleBootNotificationConfirmation(t *testing.T) {
-	machine := &OcppStateMachine{}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+	)
 	ctx := context.Background()
 
 	t.Run("InvalidPayload", func(t *testing.T) {
