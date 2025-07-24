@@ -1,2 +1,5 @@
 # Ignore environment variable files
 *.env
+
+# Ignore test coverage files
+cover.out

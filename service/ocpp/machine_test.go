@@ -10,14 +10,156 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
+func TestHandleMessage(t *testing.T) {
+	state := &types.State{
+		Pairs: []types.Pair{
+			{
+				Request: types.RequestBody{
+					Uuid:    "uuid-000",
+					Action:  types.BootNotification,
+					Payload: []byte(`{"chargeBoxSerialNumber": "91234567"}`),
+				},
+				Confirmation: nil,
+			},
+		},
+	}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+		WithState(state),
+	)
+	ctx := context.Background()
+
+	t.Run("InvalidKind", func(t *testing.T) {
+		body := []any{"2.0", "uuid-123", types.Heartbeat, map[string]any{}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("NoKind", func(t *testing.T) {
+		body := []any{"uuid-123", types.Heartbeat, map[string]any{}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidRequest_NoAction", func(t *testing.T) {
+		body := []any{2.0, "uuid-123", map[string]any{}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidRequest_UnknownAction", func(t *testing.T) {
+		body := []any{2.0, "uuid-123", map[string]any{}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidRequest_NoPayload", func(t *testing.T) {
+		body := []any{2.0, "uuid-123", types.Heartbeat}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidRequest_MissingPayload", func(t *testing.T) {
+		body := []any{2.0, "uuid-123", types.BootNotification, map[string]any{
+			"chargeBoxSerialNumber":   "91234567",
+			"chargePointModel":        "Zappi",
+			"chargePointSerialNumber": "91234567",
+		}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("Request", func(t *testing.T) {
+		body := []any{2.0, "uuid-123", types.BootNotification, map[string]any{
+			"chargeBoxSerialNumber":   "91234567",
+			"chargePointModel":        "Zappi",
+			"chargePointSerialNumber": "91234567",
+			"chargePointVendor":       "Myenergi",
+			"firmwareVersion":         "5540",
+			"iccid":                   "",
+			"imsi":                    "",
+			"meterType":               "",
+			"meterSerialNumber":       "91234567",
+		}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.NoError(t, err)
+	})
+
+	t.Run("InvalidConfirmation_NoPayload", func(t *testing.T) {
+		body := []any{3.0, "uuid-123"}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidConfirmation_MissingPayload", func(t *testing.T) {
+		body := []any{3.0, "uuid-000", map[string]any{
+			"currentTime": "2024-04-02T11:44:38Z",
+			"interval":    30,
+		}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidConfirmation_NoMatchingRequest", func(t *testing.T) {
+		body := []any{3.0, "uuid-unknown", map[string]any{
+			"currentTime": "2024-04-02T11:44:38Z",
+			"interval":    30,
+			"status":      "Accepted",
+		}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("Confirmation", func(t *testing.T) {
+		body := []any{3.0, "uuid-000", map[string]any{
+			"currentTime": "2024-04-02T11:44:38Z",
+			"interval":    30,
+			"status":      "Accepted",
+		}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		err = machine.HandleMessage(ctx, raw)
+		assert.NoError(t, err)
+	})
+
+}
+
 func TestParseRawMessage(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
 	)
 
-	t.Run("InvalidJSON", func(t *testing.T) {
+	t.Run("NotJSON", func(t *testing.T) {
 		raw := []byte(`not a json array`)
 		_, err := machine.parseRawMessage(raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidLength", func(t *testing.T) {
+		body := []any{2.0}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		_, err = machine.parseRawMessage(raw)
 		assert.Error(t, err)
 	})
 
@@ -37,7 +179,7 @@ func TestParseRawMessage(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("InvalidRequestAction", func(t *testing.T) {
+	t.Run("InvalidRequest_NoAction", func(t *testing.T) {
 		body := []any{2.0, "uuid-123", 2, map[string]any{"custom": "value"}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
@@ -45,8 +187,16 @@ func TestParseRawMessage(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("UnknownRequestAction", func(t *testing.T) {
+	t.Run("InvalidRequest_UnknownAction", func(t *testing.T) {
 		body := []any{2.0, "uuid-123", "Unknown", map[string]any{"custom": "value"}}
+		raw, err := json.Marshal(body)
+		assert.NoError(t, err)
+		_, err = machine.parseRawMessage(raw)
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidRequest_InvalidUUID", func(t *testing.T) {
+		body := []any{2.0, 123, "Unknown", map[string]any{"custom": "value"}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
 		_, err = machine.parseRawMessage(raw)
@@ -106,6 +256,45 @@ func TestHandleRequest(t *testing.T) {
             "imsi": "",
             "meterType": "",
             "meterSerialNumber": "91234567"
+        }`))
+		assert.NoError(t, err)
+	})
+}
+
+func TestHandleConfirmation(t *testing.T) {
+	state := &types.State{
+		Pairs: []types.Pair{
+			{
+				Request: types.RequestBody{
+					Uuid:    "uuid-000",
+					Action:  types.BootNotification,
+					Payload: []byte(`{"chargeBoxSerialNumber": "91234567"}`),
+				},
+				Confirmation: nil,
+			},
+		},
+	}
+	machine := NewOcppMachine(
+		WithTracerProvider(noop.NewTracerProvider()),
+		WithState(state),
+	)
+	ctx := context.Background()
+
+	t.Run("NoMatchingUuid", func(t *testing.T) {
+		err := machine.handleConfirmation(ctx, "uuid-unknown", []byte(`{}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("InvalidPayload", func(t *testing.T) {
+		err := machine.handleConfirmation(ctx, "uuid-000", []byte(`{"invalid": "payload"}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("ValidPayload", func(t *testing.T) {
+		err := machine.handleConfirmation(ctx, "uuid-000", []byte(`{
+			"currentTime": "2024-04-02T11:44:38Z",
+			"interval": 30,
+			"status": "Accepted"
         }`))
 		assert.NoError(t, err)
 	})
