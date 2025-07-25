@@ -3,26 +3,25 @@ package main
 import (
 	"context"
 	"log/slog"
+	"os"
 
 	"github.com/squishmeist/ocpp-go/internal/core"
+	"github.com/squishmeist/ocpp-go/internal/core/utils"
 	"github.com/squishmeist/ocpp-go/pkg/logging"
 	"github.com/squishmeist/ocpp-go/service/ocpp"
-)
-
-const (
-	topicName        = "topic.1"
-	subscriptionName = "subscription.1"
-	endpoint         = "localhost:4318"
-	serviceName      = "ocpp-machine"
-	namespace        = "ocpp"
-	connectionString = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
 )
 
 func main() {
 	logging.SetupLogger(logging.LevelDebug, logging.LogEnvDevelopment)
 	ctx := context.Background()
 
-	t := core.NewTelemeter(serviceName, endpoint, namespace)
+	configName := os.Getenv("CONFIG_NAME")
+	if configName == "" {
+		configName = "ocpp"
+	}
+	conf := utils.GetConfig("./config", configName, "yaml")
+
+	t := core.NewTelemeter("ocpp-machine", conf.Telemetry.ENDPOINT, "ocpp")
 	tp := t.NewTracerProvider()
 	defer func() {
 		if err := tp.Shutdown(ctx); err != nil {
@@ -30,7 +29,7 @@ func main() {
 		}
 	}()
 
-	err := ocpp.Start(ctx, topicName, subscriptionName, connectionString, tp)
+	err := ocpp.Start(ctx, tp, conf)
 	if err != nil {
 		panic(err)
 	}

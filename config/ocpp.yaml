@@ -1,0 +1,10 @@
+TELEMETRY:
+  ENDPOINT: "localhost:4318"
+AZURE_SERVICE_BUS:
+  CONNECTION_STRING: "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+  TOPIC_INBOUND:
+    NAME: "topic.inbound"
+    SUBSCRIPTION: "subscription.inbound"
+  TOPIC_OUTBOUND:
+    NAME: "topic.outbound"
+    SUBSCRIPTION: "subscription.outbound"

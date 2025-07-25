@@ -71,3 +71,7 @@ func (c *AzureServiceBusClient) NewReceiverForSubscription(topicName, subscripti
 func (c *AzureServiceBusClient) ReceiveMessages(ctx context.Context, receiver *azservicebus.Receiver) ([]*azservicebus.ReceivedMessage, error) {
 	return receiver.ReceiveMessages(ctx, 1, nil)
 }
+
+func (c *AzureServiceBusClient) NewSender(queueOrTopic string, opts *azservicebus.NewSenderOptions) (*azservicebus.Sender, error) {
+	return c.Client.NewSender(queueOrTopic, opts)
+}

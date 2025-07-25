@@ -3,17 +3,20 @@
     "Namespaces": [
       {
         "Name": "sbemulatorns",
-        "Queues": [
-          {
-            "Name": "queue.1"
-          }
-        ],
         "Topics": [
           {
-            "Name": "topic.1",
+            "Name": "topic.inbound",
             "Subscriptions": [
               {
-                "Name": "subscription.1"
+                "Name": "subscription.inbound"
+              }
+            ]
+          },
+          {
+            "Name": "topic.outbound",
+            "Subscriptions": [
+              {
+                "Name": "subscription.outbound"
               }
             ]
           }

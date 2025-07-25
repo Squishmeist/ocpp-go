@@ -6,9 +6,16 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
+	"github.com/squishmeist/ocpp-go/internal/core/utils"
 )
 
 func main() {
+	configName := os.Getenv("CONFIG_NAME")
+	if configName == "" {
+		configName = "azure-service-bus"
+	}
+	conf := utils.GetConfig("./config", configName, "yaml")
+
 	args := os.Args[1:]
 	payload := `[2, "uuid-1", "Heartbeat", {}]`
 
@@ -42,13 +49,12 @@ func main() {
 	}
 
 	ctx := context.Background()
-	connStr := "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
-	client, err := azservicebus.NewClientFromConnectionString(connStr, nil)
+	client, err := azservicebus.NewClientFromConnectionString(conf.AzureServiceBus.ConnectionString, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	topicSender, err := client.NewSender("topic.1", nil)
+	topicSender, err := client.NewSender(conf.AzureServiceBus.TopicInbound.Name, nil)
 	if err != nil {
 		panic(err)
 	}
