@@ -29,7 +29,13 @@ func main() {
 		}
 	}()
 
-	err := ocpp.Start(ctx, tp, conf)
+	ocpp := ocpp.NewOcpp(
+		ocpp.WithOcppContext(ctx),
+		ocpp.WithOcppTracerProvider(tp),
+		ocpp.WithOcppConfig(conf),
+	)
+
+	err := ocpp.Start()
 	if err != nil {
 		panic(err)
 	}

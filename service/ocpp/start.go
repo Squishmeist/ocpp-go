@@ -13,16 +13,16 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type OcppStartOption func(*OcppStart)
+type OcppOption func(*Ocpp)
 
-type OcppStart struct {
+type Ocpp struct {
 	ctx            context.Context
 	tracerProvider trace.TracerProvider
 	config         utils.Configuration
 	client         *core.AzureServiceBusClient
 }
 
-func (o *OcppStart) Validate() error {
+func (o *Ocpp) Validate() error {
 	if o.tracerProvider == nil {
 		return fmt.Errorf("tracer provider is not set")
 	}
@@ -32,72 +32,76 @@ func (o *OcppStart) Validate() error {
 	if o.config == (utils.Configuration{}) {
 		return fmt.Errorf("configuration is not set")
 	}
+	if o.client == nil {
+		return fmt.Errorf("azure service bus client is not set")
+	}
 	return nil
 }
 
-func WithStartContext(ctx context.Context) OcppStartOption {
-	return func(o *OcppStart) {
+func WithOcppContext(ctx context.Context) OcppOption {
+	return func(o *Ocpp) {
 		o.ctx = ctx
 	}
 }
 
-func WithStartTracerProvider(tp trace.TracerProvider) OcppStartOption {
-	return func(o *OcppStart) {
+func WithOcppTracerProvider(tp trace.TracerProvider) OcppOption {
+	return func(o *Ocpp) {
 		o.tracerProvider = tp
 	}
 }
 
-func WithStartConfig(config utils.Configuration) OcppStartOption {
-	return func(o *OcppStart) {
+func WithOcppConfig(config utils.Configuration) OcppOption {
+	return func(o *Ocpp) {
 		o.config = config
 	}
 }
 
-func NewOcppStart(opts ...OcppStartOption) *OcppStart {
-	start := &OcppStart{}
+func NewOcpp(opts ...OcppOption) *Ocpp {
+	start := &Ocpp{}
+
 	for _, opt := range opts {
 		opt(start)
 	}
-	if err := start.Validate(); err != nil {
-		slog.Error("Failed to create OcppStart", "error", err)
-		panic(err)
-	}
-	return start
-}
-
-// func (o *OcppStart) Start() error {
-
-// }
-
-func Start(ctx context.Context, tp trace.TracerProvider, config utils.Configuration) error {
-	inbound, outbound := config.AzureServiceBus.TopicInbound, config.AzureServiceBus.TopicOutbound
 
 	client, err := core.NewAzureServiceBusClient(
 		core.WithAzureServiceBusServiceName("ocpp"),
-		core.WithAzureServiceBusConnectionString(config.AzureServiceBus.ConnectionString),
+		core.WithAzureServiceBusConnectionString(start.config.AzureServiceBus.ConnectionString),
 	)
 	if err != nil {
 		slog.Error("Failed to create Azure Service Bus client", "error", err)
 		panic(err)
 	}
-	defer client.Close(ctx)
+	start.client = client
 
-	slog.Info("Sender created successfully", "topic", outbound.Name)
+	if err := start.Validate(); err != nil {
+		slog.Error("Failed to create Ocpp", "error", err)
+		panic(err)
+	}
 
-	client.ReceiveMessage(ctx, inbound.Name, inbound.Subscription, getHandler(tp, client, &inbound, &outbound))
+	return start
+}
+
+func (o *Ocpp) Start() error {
+	defer o.client.Close(o.ctx)
+	inbound := o.config.AzureServiceBus.TopicInbound
+
+	handler := o.handler()
+	o.client.ReceiveMessage(o.ctx, inbound.Name, inbound.Subscription, handler)
 
 	return nil
 }
 
-func getHandler(tp trace.TracerProvider, client *core.AzureServiceBusClient, inbound, outbound *utils.Topic) core.MessageHandler {
+func (o *Ocpp) handler() core.MessageHandler {
+	inbound, outbound := o.config.AzureServiceBus.TopicInbound, o.config.AzureServiceBus.TopicOutbound
+
 	machine := NewOcppMachine(
-		WithTracerProvider(tp),
+		WithTracerProvider(o.tracerProvider),
 	)
 
 	return func(ctx context.Context, topic, subscription string, msg *azservicebus.ReceivedMessage) error {
 		slog.Info("Received message", "body", string(msg.Body))
 
-		ctx, span := tp.Tracer("ocpp").Start(ctx, "processMessage", trace.WithAttributes(
+		ctx, span := o.tracerProvider.Tracer("ocpp").Start(ctx, "processMessage", trace.WithAttributes(
 			attribute.String("id", msg.MessageID),
 			attribute.String("topic", inbound.Name),
 			attribute.String("subscription", inbound.Subscription),
@@ -113,7 +117,7 @@ func getHandler(tp trace.TracerProvider, client *core.AzureServiceBusClient, inb
 			return err
 		}
 
-		if err := client.SendMessage(ctx, outbound.Name, &azservicebus.Message{
+		if err := o.client.SendMessage(ctx, outbound.Name, &azservicebus.Message{
 			MessageID: &msg.MessageID,
 			Body:      []byte(`{"status": "processed", "response": { }}`),
 		}); err != nil {
