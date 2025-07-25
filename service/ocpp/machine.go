@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	m "github.com/squishmeist/ocpp-go/service/ocpp/messages"
 	t "github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -272,7 +271,7 @@ func (o *OcppMachine) getActionKindFromUuid(uuid string) (t.ActionKind, error) {
 
 // Handles a Heartbeat request.
 func (o *OcppMachine) HandleHeartbeatRequest(ctx context.Context, payload []byte) error {
-	var request m.HeartbeatRequest
+	var request t.HeartbeatRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
 		return err
 	}
@@ -288,7 +287,7 @@ func (o *OcppMachine) HandleHeartbeatRequest(ctx context.Context, payload []byte
 
 // Handles a Heartbeat confirmation.
 func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, payload []byte) error {
-	var confirmation m.HeartbeatConfirmation
+	var confirmation t.HeartbeatConfirmation
 	if err := json.Unmarshal(payload, &confirmation); err != nil {
 		return err
 	}
@@ -304,7 +303,7 @@ func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, payload [
 
 // Handles a BootNotification request.
 func (o *OcppMachine) HandleBootNotificationRequest(ctx context.Context, payload []byte) error {
-	var request m.BootNotificationRequest
+	var request t.BootNotificationRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
 		return err
 	}
@@ -320,7 +319,7 @@ func (o *OcppMachine) HandleBootNotificationRequest(ctx context.Context, payload
 
 // Handles a BootNotification confirmation.
 func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, payload []byte) error {
-	var confirmation m.BootNotificationConfirmation
+	var confirmation t.BootNotificationConfirmation
 	if err := json.Unmarshal(payload, &confirmation); err != nil {
 		return err
 	}

@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 // Charge Point status reported in StatusNotificationRequest.
@@ -66,7 +65,7 @@ type StatusNotificationRequest struct {
 	ErrorCode       ChargePointErrorCode `json:"errorCode" validate:"required,chargePointErrorCode"`
 	Info            string               `json:"info,omitempty" validate:"max=50"`
 	Status          ChargePointStatus    `json:"status" validate:"required,chargePointStatus"`
-	Timestamp       *types.DateTime      `json:"timestamp,omitempty" validate:"omitempty"`
+	Timestamp       *DateTime            `json:"timestamp,omitempty" validate:"omitempty"`
 	VendorId        string               `json:"vendorId,omitempty" validate:"max=255"`
 	VendorErrorCode string               `json:"vendorErrorCode,omitempty" validate:"max=50"`
 }
@@ -75,6 +74,6 @@ type StatusNotificationConfirmation struct {
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("chargePointErrorCode", isValidChargePointErrorCode)
-	_ = types.Validate.RegisterValidation("chargePointStatus", isValidChargePointStatus)
+	_ = Validate.RegisterValidation("chargePointErrorCode", isValidChargePointErrorCode)
+	_ = Validate.RegisterValidation("chargePointStatus", isValidChargePointStatus)
 }

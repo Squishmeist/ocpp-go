@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 // Reason for stopping a transaction in StopTransactionRequest.
@@ -33,19 +32,19 @@ func isValidReason(fl validator.FieldLevel) bool {
 }
 
 type StopTransactionRequest struct {
-	IdTag           string             `json:"idTag,omitempty" validate:"max=20"`
-	MeterStop       int                `json:"meterStop"`
-	Timestamp       *types.DateTime    `json:"timestamp" validate:"required"`
-	TransactionId   int                `json:"transactionId"`
-	Reason          Reason             `json:"reason,omitempty" validate:"omitempty,reason"`
-	TransactionData []types.MeterValue `json:"transactionData,omitempty" validate:"omitempty,dive"`
+	IdTag           string       `json:"idTag,omitempty" validate:"max=20"`
+	MeterStop       int          `json:"meterStop"`
+	Timestamp       *DateTime    `json:"timestamp" validate:"required"`
+	TransactionId   int          `json:"transactionId"`
+	Reason          Reason       `json:"reason,omitempty" validate:"omitempty,reason"`
+	TransactionData []MeterValue `json:"transactionData,omitempty" validate:"omitempty,dive"`
 }
 
 type StopTransactionConfirmation struct {
-	IdTagInfo *types.IdTagInfo `json:"idTagInfo,omitempty" validate:"omitempty"`
+	IdTagInfo *IdTagInfo `json:"idTagInfo,omitempty" validate:"omitempty"`
 }
 
 // TODO: advanced validation
 func init() {
-	_ = types.Validate.RegisterValidation("reason", isValidReason)
+	_ = Validate.RegisterValidation("reason", isValidReason)
 }

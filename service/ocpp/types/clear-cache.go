@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 const ClearCacheFeatureName = "ClearCache"
@@ -33,5 +32,5 @@ type ClearCacheConfirmation struct {
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("cacheStatus16", isValidClearCacheStatus)
+	_ = Validate.RegisterValidation("cacheStatus16", isValidClearCacheStatus)
 }

@@ -1,4 +1,4 @@
-package messages
+package types
 
 type ConfigurationKey struct {
 	Key      string  `json:"key" validate:"required,max=50"`

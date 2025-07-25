@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 // Type of reset requested by ResetRequest.
@@ -47,6 +46,6 @@ type ResetConfirmation struct {
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("resetType16", isValidResetType)
-	_ = types.Validate.RegisterValidation("resetStatus16", isValidResetStatus)
+	_ = Validate.RegisterValidation("resetType16", isValidResetType)
+	_ = Validate.RegisterValidation("resetStatus16", isValidResetStatus)
 }

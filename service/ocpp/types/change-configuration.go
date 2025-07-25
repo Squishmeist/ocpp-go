@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 const ChangeConfigurationFeatureName = "ChangeConfiguration"
@@ -37,5 +36,5 @@ type ChangeConfigurationConfirmation struct {
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("configurationStatus", isValidConfigurationStatus)
+	_ = Validate.RegisterValidation("configurationStatus", isValidConfigurationStatus)
 }

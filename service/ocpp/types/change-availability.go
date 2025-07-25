@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 // Requested availability change in ChangeAvailabilityRequest.
@@ -52,6 +51,6 @@ type ChangeAvailabilityConfirmation struct {
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("availabilityType", isValidAvailabilityType)
-	_ = types.Validate.RegisterValidation("availabilityStatus", isValidAvailabilityStatus)
+	_ = Validate.RegisterValidation("availabilityType", isValidAvailabilityType)
+	_ = Validate.RegisterValidation("availabilityStatus", isValidAvailabilityStatus)
 }

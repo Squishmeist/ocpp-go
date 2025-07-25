@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 // Result of registration in response to a BootNotification request.
@@ -37,18 +36,18 @@ type BootNotificationRequest struct {
 }
 
 type BootNotificationConfirmation struct {
-	CurrentTime *types.DateTime    `json:"currentTime" validate:"required"`
+	CurrentTime *DateTime          `json:"currentTime" validate:"required"`
 	Interval    int                `json:"interval" validate:"gte=0"`
 	Status      RegistrationStatus `json:"status" validate:"required,registrationStatus16"`
 }
 
 func (h *BootNotificationRequest) Validate() error {
-	if err := types.Validate.Struct(h); err != nil {
+	if err := Validate.Struct(h); err != nil {
 		return err
 	}
 	return nil
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("registrationStatus16", isValidRegistrationStatus)
+	_ = Validate.RegisterValidation("registrationStatus16", isValidRegistrationStatus)
 }

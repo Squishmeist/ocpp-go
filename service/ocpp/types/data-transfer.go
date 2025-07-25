@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 // Status in DataTransferConfirmation messages.
@@ -37,5 +36,5 @@ type DataTransferConfirmation struct {
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("dataTransferStatus16", isValidDataTransferStatus)
+	_ = Validate.RegisterValidation("dataTransferStatus16", isValidDataTransferStatus)
 }

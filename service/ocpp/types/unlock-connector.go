@@ -1,8 +1,7 @@
-package messages
+package types
 
 import (
 	"github.com/go-playground/validator/v10"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 )
 
 // Status in response to UnlockConnectorRequest.
@@ -33,5 +32,5 @@ type UnlockConnectorConfirmation struct {
 }
 
 func init() {
-	_ = types.Validate.RegisterValidation("unlockStatus16", isValidUnlockStatus)
+	_ = Validate.RegisterValidation("unlockStatus16", isValidUnlockStatus)
 }
