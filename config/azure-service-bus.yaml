@@ -6,3 +6,6 @@ AZURE_SERVICE_BUS:
   TOPIC_OUTBOUND:
     NAME: "topic.outbound"
     SUBSCRIPTION: "subscription.outbound"
+HTTP_SERVER:
+  PORT: ":8082"
+  HOST: "localhost"

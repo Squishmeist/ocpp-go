@@ -31,6 +31,7 @@ func Start(ctx context.Context, tp trace.TracerProvider, config utils.Configurat
 		panic(err)
 	}
 	defer receiver.Close(ctx)
+	slog.Info("Receiver created successfully", "topic", inbound.Name)
 
 	sender, err := client.NewSender(outbound.Name, nil)
 	if err != nil {
@@ -38,13 +39,11 @@ func Start(ctx context.Context, tp trace.TracerProvider, config utils.Configurat
 		panic(err)
 	}
 	defer sender.Close(ctx)
+	slog.Info("Sender created successfully", "topic", outbound.Name)
 
 	machine := NewOcppMachine(
 		WithTracerProvider(tp),
 	)
-
-	slog.Info("Receiver created successfully", "topic", inbound.Name)
-	slog.Info("Sender created successfully", "topic", outbound.Name)
 
 	for {
 		messages, err := client.ReceiveMessages(ctx, receiver)
@@ -75,28 +74,24 @@ func Start(ctx context.Context, tp trace.TracerProvider, config utils.Configurat
 				continue
 			}
 
-			message := &azservicebus.Message{
+			if err := sender.SendMessage(ctx, &azservicebus.Message{
 				MessageID: &msg.MessageID,
 				Body:      []byte(`{"status": "processed", "response": { }}`),
-			}
-
-			err = sender.SendMessage(ctx, message, nil)
-			if err != nil {
+			}, nil); err != nil {
 				slog.Error("Failed to send message", "error", err)
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				span.End()
-				// TODO: Abandon the message in production
-				receiver.CompleteMessage(ctx, msg, nil)
-				// receiver.AbandonMessage(ctx, msg, nil)
+				// TODO: dont use this in production
+				// receiver.CompleteMessage(ctx, msg, nil)
 				continue
 			}
 
 			slog.Info("state after processing", "state", *machine.state)
 			span.SetStatus(codes.Ok, "Message processed successfully")
 			span.End()
-			// TODO: dont use this in production, this is just for testing
-			receiver.CompleteMessage(ctx, msg, nil)
+			// TODO: dont use this in production
+			// receiver.CompleteMessage(ctx, msg, nil)
 		}
 	}
 }

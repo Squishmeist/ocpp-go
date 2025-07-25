@@ -7,7 +7,7 @@ ocpp:
 	go run -v ./cmd/ocpp/main.go
 
 send-message:
-	go run -v ./cmd/azure-service-bus/main.go $(ARGS)
+	go run -v ./cmd/azure-service-bus/main.go
 
 dev:
 	@echo "1. Run 'make azure-service-bus' to start the emulator"

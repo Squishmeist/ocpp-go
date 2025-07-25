@@ -11,6 +11,7 @@ import (
 type Configuration struct {
 	Telemetry       TelemetryConfiguration
 	AzureServiceBus AzureServiceBusConfiguration
+	HttpServer      HttpServer
 }
 
 type Topic struct {
@@ -26,6 +27,11 @@ type AzureServiceBusConfiguration struct {
 	ConnectionString string
 	TopicInbound     Topic
 	TopicOutbound    Topic
+}
+
+type HttpServer struct {
+	Port string
+	Host string
 }
 
 func initiateConfigDefaults(configName string, configPath []string, configType string) *viper.Viper {
@@ -83,6 +89,10 @@ func GetConfig(path, name, extn string) Configuration {
 				Name:         viperObj.GetString("AZURE_SERVICE_BUS.TOPIC_OUTBOUND.NAME"),
 				Subscription: viperObj.GetString("AZURE_SERVICE_BUS.TOPIC_OUTBOUND.SUBSCRIPTION"),
 			},
+		},
+		HttpServer: HttpServer{
+			Port: viperObj.GetString("HTTP_SERVER.PORT"),
+			Host: viperObj.GetString("HTTP_SERVER.HOST"),
 		},
 	}
 }

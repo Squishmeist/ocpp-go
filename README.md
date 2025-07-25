@@ -4,64 +4,78 @@ A Go implementation for handling OCPP 1.6 messages, designed for extensible serv
 
 ## 🛠️ How it Works
 
-- 📨 The OCPP listener subscribes to a local Azure Service Bus topic and processes incoming OCPP messages.
-- 🟦 The Azure Service Bus Emulator provides a local, Dockerized message bus for development.
-- 🛠️ Use the CLI to send OCPP messages to the topic for testing and development.
+- 📨 **OCPP Listener:** Subscribes to a local Azure Service Bus topic and processes incoming OCPP messages.
+- 🟦 **Azure Service Bus:** Provides a local, Dockerized message bus for development and testing.
+- 📤 **HTTP Sender Server:** Lets you send OCPP messages to the topic via HTTP for easy testing.
+- 👀 **Topic Receivers:** Automatically logs all messages received on both inbound and outbound topics.
 
 ## ✨ Features
 
 - ✅ Parse and validate OCPP 1.6 messages (Heartbeat, BootNotification, etc.)
 - ☁️ Azure Service Bus integration (queue and topic support)
 - 🗃️ In-memory state management and message pairing
+- 🔎 Real-time logging of all topic traffic
 
 ## 🚀 Getting Started
 
 ### 🛠️ Development Workflow
 
-1. **Start the Azure Service Bus emulator:**
+1. **Start the Azure Service Bus emulator (Docker Compose):**
+
    ```sh
    make azure-service-bus
    ```
+
+   Runs the emulator in Docker using your `docker-compose.yaml`.
+
 2. **Start the OCPP listener:**
+
    ```sh
    make ocpp
    ```
-3. **Send a message to the topic:**
+
+   Runs the OCPP machine, which listens for messages on the inbound topic and processes them.
+
+3. **Start the HTTP sender server:**
    ```sh
-   make send-message ARGS=heartbeatrequest
+   make send-message
    ```
+   Starts an HTTP server for sending OCPP messages to the inbound topic.  
+   Also runs receivers for both inbound and outbound topics, so you can see all message traffic in your logs.
 
-### ⚡️ OCPP Listener
+### 🟦 Azure Service Bus
 
-To start the OCPP listener service (which listens for messages from your local Azure Service Bus topic):
+A local Azure Service Bus emulator for development.
 
-```sh
-make ocpp
-```
+> **Note:** Make sure the emulator is running before starting the OCPP listener or sender server.
 
-> **Note:** Make sure the Azure Service Bus emulator is running before starting the listener.
+### ⚡️ OCPP
 
-### 🟦 Azure Service Bus Emulator
+The OCPP machine listens for messages from your local Azure Service Bus inbound topic, parses, and processes them.
 
-To run the Azure Service Bus emulator locally (for topic/queue development):
+### 📤 Send-Messages
 
-```sh
-make azure-service-bus
-```
-
-### 📤 Sending Messages
-
-You can send OCPP messages to your local Azure Service Bus topic using the CLI:
+Send OCPP messages to your local Azure Service Bus topic using the HTTP server:
 
 ```sh
-make send-message ARGS=heartbeatrequest
+curl -X POST "http://localhost:<YOUR-HTTP-PORT>/send?msg=heartbeatrequest"
 ```
 
-Supported ARGS:
+**Supported `msg` values:**
 
 - `heartbeatrequest`
 - `heartbeatconfirmation`
-- (add more as needed)
+- `bootnotificationrequest`
+- `bootnotificationconfirmation`
+- `requesterror`
+- `confirmationerror`
+
+Each value triggers a different OCPP payload.
+
+### 👀 Message Receivers
+
+The sender server runs receivers for both the inbound and outbound topics.  
+This lets you observe all messages sent to either topic (from the OCPP machine or from your sender) directly in your logs.
 
 ### 📦 Payloads
 
