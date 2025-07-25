@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 )
@@ -64,14 +65,53 @@ func (c *AzureServiceBusClient) Close(ctx context.Context) error {
 	return c.Client.Close(ctx)
 }
 
-func (c *AzureServiceBusClient) NewReceiverForSubscription(topicName, subscriptionName string, opts *azservicebus.ReceiverOptions) (*azservicebus.Receiver, error) {
-	return c.Client.NewReceiverForSubscription(topicName, subscriptionName, opts)
+func (c *AzureServiceBusClient) SendMessage(ctx context.Context, queueOrTopic string, message *azservicebus.Message) error {
+	sender, err := c.Client.NewSender(queueOrTopic, nil)
+	if err != nil {
+		slog.Error("Failed to create azure service bus sender", "error", err)
+		return err
+	}
+
+	err = sender.SendMessage(ctx, message, nil)
+	if err != nil {
+		slog.Error("Failed to send message to topic", "error", err, "queueOrTopic", queueOrTopic)
+	}
+
+	return nil
 }
 
-func (c *AzureServiceBusClient) ReceiveMessages(ctx context.Context, receiver *azservicebus.Receiver) ([]*azservicebus.ReceivedMessage, error) {
-	return receiver.ReceiveMessages(ctx, 1, nil)
-}
+type MessageHandler func(ctx context.Context, topic, subscription string, msg *azservicebus.ReceivedMessage) error
 
-func (c *AzureServiceBusClient) NewSender(queueOrTopic string, opts *azservicebus.NewSenderOptions) (*azservicebus.Sender, error) {
-	return c.Client.NewSender(queueOrTopic, opts)
+func (c *AzureServiceBusClient) ReceiveMessage(
+	ctx context.Context,
+	topic, subscription string,
+	handler MessageHandler,
+) error {
+	receiver, err := c.Client.NewReceiverForSubscription(topic, subscription, nil)
+	if err != nil {
+		slog.Error("Failed to create azure service bus receiver", "error", err)
+		return err
+	}
+
+	for {
+		messages, err := receiver.ReceiveMessages(ctx, 1, nil)
+		if err != nil {
+			slog.Error("Failed to receive messages", "error", err)
+			return err
+		}
+
+		if len(messages) == 0 {
+			slog.Info("No messages received from topic", "topic", topic)
+			continue
+		}
+
+		slog.Info("Received messages from topic", "topic", topic, "messageCount", len(messages))
+
+		for _, msg := range messages {
+			if err := handler(ctx, topic, subscription, msg); err != nil {
+				slog.Error("Failed to handle message", "error", err)
+			}
+		}
+	}
+
 }

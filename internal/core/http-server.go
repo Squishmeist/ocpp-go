@@ -17,7 +17,7 @@ type HttpServer struct {
 
 type HttpOption func(*HttpServer)
 
-func WithServiceName(serviceName string) HttpOption {
+func WithHttpServiceName(serviceName string) HttpOption {
 	return func(s *HttpServer) {
 		s.ServiceName = serviceName
 	}

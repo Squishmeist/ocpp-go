@@ -7,7 +7,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -22,9 +22,9 @@ type Telemeter struct {
 
 func (t *Telemeter) NewTracerProvider() *trace.TracerProvider {
 	ctx := context.Background()
-	client := otlptracehttp.NewClient(
-		otlptracehttp.WithEndpoint(t.endpoint),
-		otlptracehttp.WithInsecure(),
+	client := otlptracegrpc.NewClient(
+		otlptracegrpc.WithEndpoint(t.endpoint),
+		otlptracegrpc.WithInsecure(),
 	)
 
 	exporter, err := otlptrace.New(ctx, client)

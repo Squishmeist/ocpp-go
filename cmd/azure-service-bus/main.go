@@ -33,56 +33,25 @@ func main() {
 	}
 	defer client.Close(ctx)
 
-	sender, err := client.NewSender(inbound.Name, nil)
-	if err != nil {
-		slog.Error("Failed to create sender", "error", err)
-		panic(err)
-	}
-	defer sender.Close(ctx)
-	slog.Info("Sender created successfully", "topic", inbound.Name)
-
-	inboundReceiver, err := client.NewReceiverForSubscription(inbound.Name, inbound.Subscription, nil)
-	if err != nil {
-		slog.Error("Failed to create receiver", "error", err)
-		panic(err)
-	}
-	defer inboundReceiver.Close(ctx)
-	slog.Info("Receiver created successfully", "topic", inbound.Name)
-
-	outboundReceiver, err := client.NewReceiverForSubscription(outbound.Name, outbound.Subscription, nil)
-	if err != nil {
-		slog.Error("Failed to create receiver", "error", err)
-		panic(err)
-	}
-	defer outboundReceiver.Close(ctx)
-	slog.Info("Receiver created successfully", "topic", outbound.Name)
+	go client.ReceiveMessage(ctx, inbound.Name, inbound.Subscription, receive())
+	go client.ReceiveMessage(ctx, outbound.Name, outbound.Subscription, receive())
 
 	server := core.NewHttpServer(
-		core.WithServiceName("azure-service-bus"),
+		core.WithHttpServiceName("azure-service-bus"),
 	)
-	send(server, sender)
-
-	go read(ctx, inboundReceiver, "inbound")
-	go read(ctx, outboundReceiver, "outbound")
+	send(server, client, &inbound)
 
 	server.Start(conf.HttpServer.Port)
 }
 
-func read(ctx context.Context, receiver *azservicebus.Receiver, direction string) {
-	for {
-		messages, err := receiver.ReceiveMessages(ctx, 10, nil)
-		if err != nil {
-			slog.Error("Failed to receive messages", "direction", direction, "error", err)
-			continue
-		}
-
-		for _, msg := range messages {
-			slog.Info("Received message", "direction", direction, "body", string(msg.Body))
-		}
+func receive() core.MessageHandler {
+	return func(ctx context.Context, topic, subscription string, msg *azservicebus.ReceivedMessage) error {
+		slog.Info("Received message", "topic", topic, "subscription", subscription, "body", string(msg.Body))
+		return nil
 	}
 }
 
-func send(server *core.HttpServer, sender *azservicebus.Sender) {
+func send(server *core.HttpServer, client *core.AzureServiceBusClient, inbound *utils.Topic) {
 	server.AddRoute(http.MethodPost, "/send", func(reqCtx echo.Context) error {
 		c := reqCtx.Request().Context()
 		msgType := reqCtx.QueryParam("msg")
@@ -118,9 +87,9 @@ func send(server *core.HttpServer, sender *azservicebus.Sender) {
         }]`
 		}
 
-		if err := sender.SendMessage(c, &azservicebus.Message{
+		if err := client.SendMessage(c, inbound.Name, &azservicebus.Message{
 			Body: []byte(payload),
-		}, nil); err != nil {
+		}); err != nil {
 			return reqCtx.String(http.StatusInternalServerError, fmt.Sprintf("Failed to send message: %v", err))
 		}
 

@@ -1,5 +1,5 @@
 TELEMETRY:
-  ENDPOINT: "localhost:4318"
+  ENDPOINT: "localhost:4317"
 AZURE_SERVICE_BUS:
   CONNECTION_STRING: "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
   TOPIC_INBOUND:
