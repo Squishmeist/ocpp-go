@@ -10,8 +10,8 @@ type MessageKind string
 
 // Defines the kind of messages in OCPP.
 const (
-	Request      MessageKind = "request"
-	Confirmation MessageKind = "confirmation"
+	Request      MessageKind = "REQUEST"
+	Confirmation MessageKind = "CONFIRMATION"
 )
 
 // Checks if the MessageKind is valid.
@@ -25,13 +25,29 @@ type ActionKind string
 
 // Defines the kinds of actions in OCPP.
 const (
-	Heartbeat        ActionKind = "Heartbeat"
-	BootNotification ActionKind = "BootNotification"
+	Heartbeat        ActionKind = "HEARTBEAT"
+	BootNotification ActionKind = "BOOTNOTIFICATION"
 )
 
 // Checks if the ActionKind is valid.
 func (a ActionKind) IsValid() bool {
 	return a == Heartbeat || a == BootNotification
+}
+
+// Checks if the ActionKind is valid.
+func (a ActionKind) ToPtr() *ActionKind {
+	if a.IsValid() {
+		return &a
+	}
+	return nil
+}
+
+// Represents a Message body in the OCPP.
+type MessageBody struct {
+	Kind    MessageKind // e.g. REQUEST or CONFIRMATION
+	Uuid    string      // UUID
+	Action  ActionKind  // e.g. Heartbeat
+	Payload []byte
 }
 
 // Represents a Request body in the OCPP.

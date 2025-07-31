@@ -79,7 +79,7 @@ func NewOcpp(opts ...OcppOption) *Ocpp {
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
 	}
-	store := NewStore(start.tracerProvider, queries)
+	store := NewDbStore(start.tracerProvider, queries)
 
 	machine := NewOcppMachine(
 		WithTracerProvider(start.tracerProvider),
