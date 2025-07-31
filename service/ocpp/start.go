@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/squishmeist/ocpp-go/internal/core"
 	"github.com/squishmeist/ocpp-go/internal/core/utils"
+	"github.com/squishmeist/ocpp-go/service/ocpp/db"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -20,6 +21,7 @@ type Ocpp struct {
 	tracerProvider trace.TracerProvider
 	config         utils.Configuration
 	client         *core.AzureServiceBusClient
+	machine        *OcppMachine
 }
 
 func (o *Ocpp) Validate() error {
@@ -73,6 +75,18 @@ func NewOcpp(opts ...OcppOption) *Ocpp {
 	}
 	start.client = client
 
+	queries, _, err := db.Connect(start.config.Database)
+	if err != nil {
+		slog.Error("failed to connect to database", "error", err)
+	}
+	store := NewStore(start.tracerProvider, queries)
+
+	machine := NewOcppMachine(
+		WithTracerProvider(start.tracerProvider),
+		WithStore(store),
+	)
+	start.machine = machine
+
 	if err := start.Validate(); err != nil {
 		slog.Error("Failed to create Ocpp", "error", err)
 		panic(err)
@@ -94,13 +108,7 @@ func (o *Ocpp) Start() error {
 func (o *Ocpp) handler() core.MessageHandler {
 	inbound, outbound := o.config.AzureServiceBus.TopicInbound, o.config.AzureServiceBus.TopicOutbound
 
-	machine := NewOcppMachine(
-		WithTracerProvider(o.tracerProvider),
-	)
-
 	return func(ctx context.Context, topic, subscription string, msg *azservicebus.ReceivedMessage) error {
-		slog.Info("Received message", "body", string(msg.Body))
-
 		ctx, span := o.tracerProvider.Tracer("ocpp").Start(ctx, "processMessage", trace.WithAttributes(
 			attribute.String("id", msg.MessageID),
 			attribute.String("topic", inbound.Name),
@@ -108,9 +116,8 @@ func (o *Ocpp) handler() core.MessageHandler {
 			attribute.String("body", string(msg.Body)),
 		))
 
-		err := machine.HandleMessage(ctx, msg.Body)
+		err := o.machine.HandleMessage(ctx, msg.Body)
 		if err != nil {
-			slog.Error("Error handling message", "error", err)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			span.End()
@@ -121,20 +128,14 @@ func (o *Ocpp) handler() core.MessageHandler {
 			MessageID: &msg.MessageID,
 			Body:      []byte(`{"status": "processed", "response": { }}`),
 		}); err != nil {
-			slog.Error("Failed to send message", "error", err)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			span.End()
-			// TODO: dont use this in production
-			// receiver.CompleteMessage(ctx, msg, nil)
 			return err
 		}
 
-		slog.Info("state after processing", "state", *machine.state)
 		span.SetStatus(codes.Ok, "Message processed successfully")
 		span.End()
-		// TODO: dont use this in production
-		// receiver.CompleteMessage(ctx, msg, nil)
 		return nil
 	}
 }

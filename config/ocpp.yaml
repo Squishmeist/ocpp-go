@@ -8,3 +8,7 @@ AZURE_SERVICE_BUS:
   TOPIC_OUTBOUND:
     NAME: "topic.outbound"
     SUBSCRIPTION: "subscription.outbound"
+DATABASE:
+  DRIVER: "sqlite3"
+  PROTOCOL: "file"
+  ADDR: "/Users/ainsley.lee/tmp/ocpp.db"

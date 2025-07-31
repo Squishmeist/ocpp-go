@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/squishmeist/ocpp-go/service/ocpp/db/schemas"
 	t "github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -17,10 +18,9 @@ type OcppMachineOption func(*OcppMachine)
 
 // The main state machine for handling OCPP messages.
 type OcppMachine struct {
-	// Store          OcppStore
 	// Servicebus     ServiceBus
 	TracerProvider trace.TracerProvider
-	state          *t.State
+	store          *Store
 }
 
 // Ensures all required fields are set in the OcppMachine.
@@ -28,8 +28,8 @@ func (o *OcppMachine) Validate() error {
 	if o.TracerProvider == nil {
 		return fmt.Errorf("tracer provider is not set")
 	}
-	if o.state == nil {
-		return fmt.Errorf("state is not set")
+	if o.store == nil {
+		return fmt.Errorf("store is not set")
 	}
 	return nil
 }
@@ -41,18 +41,16 @@ func WithTracerProvider(tp trace.TracerProvider) OcppMachineOption {
 	}
 }
 
-// Sets the state for the OcppMachine.
-func WithState(state *t.State) OcppMachineOption {
+// Sets the store for the OcppMachine.
+func WithStore(store *Store) OcppMachineOption {
 	return func(m *OcppMachine) {
-		m.state = state
+		m.store = store
 	}
 }
 
 // Creates a new OcppMachine with the provided options.
 func NewOcppMachine(opts ...OcppMachineOption) *OcppMachine {
-	machine := &OcppMachine{
-		state: &t.State{},
-	}
+	machine := &OcppMachine{}
 
 	for _, opt := range opts {
 		opt(machine)
@@ -92,26 +90,45 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
 			if err := o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload); err != nil {
 				return err
 			}
-			o.state.AddRequest(t.RequestBody{
-				Action:  *parsedMsg.action,
+			message, handler := o.store.AddRequestMessage(ctx, &schemas.InsertMessageParams{
 				Uuid:    parsedMsg.uuid,
-				Payload: parsedMsg.payload,
+				Type:    "REQUEST",
+				Action:  string(*parsedMsg.action),
+				Payload: string(parsedMsg.payload),
 			})
-			span.AddEvent("handled request", trace.WithAttributes(
-				attribute.String("action", string(*parsedMsg.action)),
-				attribute.String("uuid", parsedMsg.uuid),
+			if handler.Error != nil {
+				return fmt.Errorf("failed to add request message: %w", handler.Error)
+			}
+			slog.Info("Added request message",
+				"action", message.Action,
+				"uuid", message.Uuid,
+				"payload", message.Payload,
+			)
+			span.AddEvent(handler.Message, trace.WithAttributes(
+				attribute.String("action", message.Action),
+				attribute.String("uuid", message.Uuid),
 			))
 			return nil
 		case t.Confirmation:
 			if err := o.handleConfirmation(ctx, parsedMsg.uuid, parsedMsg.payload); err != nil {
 				return err
 			}
-			o.state.AddConfirmation(t.ConfirmationBody{
+			message, handler := o.store.AddConfirmationMessage(ctx, &schemas.InsertMessageParams{
 				Uuid:    parsedMsg.uuid,
-				Payload: parsedMsg.payload,
+				Type:    "CONFIRMATION",
+				Payload: string(parsedMsg.payload),
 			})
-			span.AddEvent("handled confirmation", trace.WithAttributes(
-				attribute.String("uuid", parsedMsg.uuid),
+			if handler.Error != nil {
+				return fmt.Errorf("failed to add confirmation message: %w", handler.Error)
+			}
+			slog.Info("Added confirmation message",
+				"uuid", message.Uuid,
+				"action", message.Action,
+				"payload", message.Payload,
+			)
+			span.AddEvent(handler.Message, trace.WithAttributes(
+				attribute.String("uuid", message.Uuid),
+				attribute.String("action", message.Action),
 			))
 			return nil
 		default:
@@ -257,11 +274,15 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, uuid string, paylo
 
 // Retrieves the action kind from the state using the UUID.
 func (o *OcppMachine) getActionKindFromUuid(uuid string) (t.ActionKind, error) {
-	match, err := o.state.FindByUuid(uuid)
-	if err != nil {
-		return t.ActionKind(""), fmt.Errorf("failed to find request: %w", err)
+	message, handler := o.store.GetRequestFromUuid(context.Background(), &uuid)
+	if handler.Error != nil {
+		return t.ActionKind(""), fmt.Errorf("failed to find request: %w", handler.Error)
 	}
-	return match.Request.Action, nil
+	action := t.ActionKind(message.Action)
+	if !action.IsValid() {
+		return t.ActionKind(""), fmt.Errorf("invalid action kind: %s", message.Action)
+	}
+	return action, nil
 }
 
 // OCPP Commands

@@ -12,6 +12,7 @@ type Configuration struct {
 	Telemetry       TelemetryConfiguration
 	AzureServiceBus AzureServiceBusConfiguration
 	HttpServer      HttpServer
+	Database        DatabaseConfiguration
 }
 
 type Topic struct {
@@ -32,6 +33,13 @@ type AzureServiceBusConfiguration struct {
 type HttpServer struct {
 	Port string
 	Host string
+}
+
+type DatabaseConfiguration struct {
+	Address  string
+	Protocol string
+	Driver   string
+	PoolSize int
 }
 
 func initiateConfigDefaults(configName string, configPath []string, configType string) *viper.Viper {
@@ -93,6 +101,12 @@ func GetConfig(path, name, extn string) Configuration {
 		HttpServer: HttpServer{
 			Port: viperObj.GetString("HTTP_SERVER.PORT"),
 			Host: viperObj.GetString("HTTP_SERVER.HOST"),
+		},
+		Database: DatabaseConfiguration{
+			Address:  viperObj.GetString("DATABASE.ADDR"),
+			Protocol: viperObj.GetString("DATABASE.PROTOCOL"),
+			Driver:   viperObj.GetString("DATABASE.DRIVER"),
+			PoolSize: viperObj.GetInt("DATABASE.POOL_SIZE"),
 		},
 	}
 }

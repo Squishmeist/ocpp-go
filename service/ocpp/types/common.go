@@ -47,13 +47,9 @@ type ConfirmationBody struct {
 	Payload []byte // e.g. interface{}
 }
 
-type ChargePointState struct {
-	ID              string
-	Connected       bool
-	LastSeen        time.Time
-	CurrentStatus   string                 // e.g. Available, Charging, SuspendedEV, etc.
-	ConnectorStatus map[int]string         // Connector ID -> Status
-	PendingRequests map[string]RequestBody // MessageID -> Request
-	LastHeartbeat   time.Time
-	LastMeterValues map[int]MeterValue // Connector ID -> Last Meter Reading
+type ChargePoint struct {
+	ID           string
+	Connected    bool
+	LastSeen     time.Time
+	Availability AvailabilityType
 }
