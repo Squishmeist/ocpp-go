@@ -17,7 +17,7 @@ type DbStore struct {
 	queries *schemas.Queries
 }
 
-func NewDbStore(tp trace.TracerProvider, queries *schemas.Queries) StoreAdapter {
+func NewDbStore(tp trace.TracerProvider, queries *schemas.Queries) *DbStore {
 	return &DbStore{
 		Tracer:  tp.Tracer("store"),
 		queries: queries,
