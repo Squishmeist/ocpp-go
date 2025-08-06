@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"go.opentelemetry.io/otel/attribute"
@@ -95,7 +96,7 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
 				Payload: parsedMsg.payload,
 			})
 			if handler.Error != nil {
-				return fmt.Errorf("failed to add request message: %w", handler.Error)
+				return fmt.Errorf("failed to add request message: %v", handler.Error)
 			}
 			slog.Info("Added request message",
 				"action", message.Action,
@@ -116,7 +117,7 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
 				Payload: parsedMsg.payload,
 			})
 			if handler.Error != nil {
-				return fmt.Errorf("failed to add confirmation message: %w", handler.Error)
+				return fmt.Errorf("failed to add confirmation message: %v", handler.Error)
 			}
 			slog.Info("Added confirmation message",
 				"uuid", message.Uuid,
@@ -200,7 +201,7 @@ func (o *OcppMachine) parseRequestBody(uuid string, arr []any) (types.RequestBod
 	if !ok {
 		return types.RequestBody{}, fmt.Errorf("invalid action, expected action to be a string, got %T", arr[2])
 	}
-	action := types.ActionKind(actionStr)
+	action := types.ActionKind(strings.ToUpper(actionStr))
 	if !action.IsValid() {
 		return types.RequestBody{}, fmt.Errorf("invalid action kind: %s", actionStr)
 	}
@@ -273,7 +274,7 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, uuid string, paylo
 func (o *OcppMachine) getActionKindFromUuid(uuid string) (types.ActionKind, error) {
 	message, handler := o.store.GetRequestFromUuid(context.Background(), uuid)
 	if handler.Error != nil {
-		return types.ActionKind(""), fmt.Errorf("failed to find request: %w", handler.Error)
+		return types.ActionKind(""), fmt.Errorf("failed to find request: %v", handler.Error)
 	}
 	action := types.ActionKind(message.Action)
 	if !action.IsValid() {

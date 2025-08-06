@@ -5,27 +5,64 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/squishmeist/ocpp-go/internal/core"
+	"github.com/squishmeist/ocpp-go/internal/core/utils"
 	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-func TestHandleMessage(t *testing.T) {
-	state := &types.State{
-		Pairs: []types.Pair{
-			{
-				Request: types.RequestBody{
-					Uuid:    "uuid-000",
-					Action:  types.BootNotification,
-					Payload: []byte(`{"chargeBoxSerialNumber": "91234567"}`),
-				},
-				Confirmation: nil,
-			},
-		},
+type mockStore struct{}
+
+func (m *mockStore) GetRequestFromUuid(ctx context.Context, uuid string) (types.RequestBody, core.HandlerResponse) {
+	if uuid != "uuid-000" {
+		return types.RequestBody{}, core.HandlerResponse{
+			TraceID: "trace-id-123",
+			Error:   utils.StringPtr("request not found"),
+			Message: "request not found",
+		}
 	}
+
+	return types.RequestBody{
+			Uuid:    "uuid-000",
+			Action:  types.BootNotification,
+			Payload: []byte(`{"chargeBoxSerialNumber": "91234567"}`),
+		}, core.HandlerResponse{
+			TraceID: "trace-id-123",
+			Error:   nil,
+			Message: "request found",
+		}
+}
+
+func (m *mockStore) AddRequestMessage(ctx context.Context, request types.RequestBody) (types.MessageBody, core.HandlerResponse) {
+	return types.MessageBody{
+			Uuid:    request.Uuid,
+			Kind:    "REQUEST",
+			Payload: request.Payload,
+		}, core.HandlerResponse{
+			TraceID: "trace-id-123",
+			Message: "request added",
+			Error:   nil,
+		}
+}
+
+func (m *mockStore) AddConfirmationMessage(ctx context.Context, confirmation types.ConfirmationBody) (types.MessageBody, core.HandlerResponse) {
+	return types.MessageBody{
+			Uuid:    confirmation.Uuid,
+			Kind:    "CONFIRMATION",
+			Payload: confirmation.Payload,
+		}, core.HandlerResponse{
+			TraceID: "trace-id-456",
+			Message: "confirmation added",
+			Error:   nil,
+		}
+}
+
+func TestHandleMessage(t *testing.T) {
+
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
-		WithState(state),
+		WithStore(&mockStore{}),
 	)
 	ctx := context.Background()
 
@@ -147,6 +184,7 @@ func TestHandleMessage(t *testing.T) {
 func TestParseRawMessage(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithStore(&mockStore{}),
 	)
 
 	t.Run("NotJSON", func(t *testing.T) {
@@ -232,6 +270,7 @@ func TestParseRawMessage(t *testing.T) {
 func TestHandleRequest(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithStore(&mockStore{}),
 	)
 	ctx := context.Background()
 
@@ -262,21 +301,10 @@ func TestHandleRequest(t *testing.T) {
 }
 
 func TestHandleConfirmation(t *testing.T) {
-	state := &types.State{
-		Pairs: []types.Pair{
-			{
-				Request: types.RequestBody{
-					Uuid:    "uuid-000",
-					Action:  types.BootNotification,
-					Payload: []byte(`{"chargeBoxSerialNumber": "91234567"}`),
-				},
-				Confirmation: nil,
-			},
-		},
-	}
+	store := &mockStore{}
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
-		WithState(state),
+		WithStore(store),
 	)
 	ctx := context.Background()
 
@@ -303,6 +331,7 @@ func TestHandleConfirmation(t *testing.T) {
 func TestHandleHeartbeatRequest(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithStore(&mockStore{}),
 	)
 	ctx := context.Background()
 
@@ -315,6 +344,7 @@ func TestHandleHeartbeatRequest(t *testing.T) {
 func TestHandleHeartbeatConfirmation(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithStore(&mockStore{}),
 	)
 	ctx := context.Background()
 
@@ -332,6 +362,7 @@ func TestHandleHeartbeatConfirmation(t *testing.T) {
 func TestHandleBootNotificationRequest(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithStore(&mockStore{}),
 	)
 	ctx := context.Background()
 
@@ -359,6 +390,7 @@ func TestHandleBootNotificationRequest(t *testing.T) {
 func TestHandleBootNotificationConfirmation(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithStore(&mockStore{}),
 	)
 	ctx := context.Background()
 
