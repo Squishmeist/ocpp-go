@@ -21,6 +21,7 @@ type OcppMachine struct {
 	// Servicebus     ServiceBus
 	TracerProvider trace.TracerProvider
 	store          StoreAdapter
+	cache          CacheAdapter
 }
 
 // Ensures all required fields are set in the OcppMachine.
@@ -30,6 +31,9 @@ func (o *OcppMachine) Validate() error {
 	}
 	if o.store == nil {
 		return fmt.Errorf("store is not set")
+	}
+	if o.cache == nil {
+		return fmt.Errorf("cache is not set")
 	}
 	return nil
 }
@@ -45,6 +49,13 @@ func WithTracerProvider(tp trace.TracerProvider) OcppMachineOption {
 func WithStore(store StoreAdapter) OcppMachineOption {
 	return func(m *OcppMachine) {
 		m.store = store
+	}
+}
+
+// Sets the cache for the OcppMachine.
+func WithCache(cache CacheAdapter) OcppMachineOption {
+	return func(m *OcppMachine) {
+		m.cache = cache
 	}
 }
 
@@ -65,9 +76,23 @@ func NewOcppMachine(opts ...OcppMachineOption) *OcppMachine {
 }
 
 // Handles an incoming OCPP message.
-func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
+func (o *OcppMachine) HandleMessage(ctx context.Context, meta types.Meta, msg []byte) error {
 	ctx, span := o.TracerProvider.Tracer("ocpp").Start(ctx, "HandleMessage")
 	defer span.End()
+
+	processed, err := o.cache.HasProcessed(ctx, meta.Id)
+	if err != nil {
+		err := fmt.Errorf("failed to process message: %v", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	if processed {
+		slog.Info("Message already processed", "id", meta.Id)
+		span.SetStatus(codes.Ok, "Message already processed")
+		return nil
+	}
 
 	select {
 	case <-ctx.Done():
@@ -90,44 +115,45 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, msg []byte) error {
 			if err := o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload); err != nil {
 				return err
 			}
-			message, handler := o.store.AddRequestMessage(ctx, types.RequestBody{
+
+			if err := o.cache.AddRequest(ctx, meta, types.RequestBody{
 				Uuid:    parsedMsg.uuid,
 				Action:  *parsedMsg.action,
 				Payload: parsedMsg.payload,
-			})
-			if handler.Error != nil {
-				return fmt.Errorf("failed to add request message: %v", handler.Error)
+			}); err != nil {
+				return err
 			}
+
 			slog.Info("Added request message",
-				"action", message.Action,
-				"uuid", message.Uuid,
-				"payload", message.Payload,
+				"action", *parsedMsg.action,
+				"uuid", parsedMsg.uuid,
+				"payload", parsedMsg.payload,
 			)
-			span.AddEvent(handler.Message, trace.WithAttributes(
-				attribute.String("action", string(message.Action)),
-				attribute.String("uuid", message.Uuid),
+			span.AddEvent("added request message", trace.WithAttributes(
+				attribute.String("action", string(*parsedMsg.action)),
+				attribute.String("uuid", parsedMsg.uuid),
 			))
 			return nil
 		case types.Confirmation:
 			if err := o.handleConfirmation(ctx, parsedMsg.uuid, parsedMsg.payload); err != nil {
 				return err
 			}
-			message, handler := o.store.AddConfirmationMessage(ctx, types.ConfirmationBody{
+
+			if err := o.cache.RemoveRequest(ctx, meta, types.ConfirmationBody{
 				Uuid:    parsedMsg.uuid,
 				Payload: parsedMsg.payload,
-			})
-			if handler.Error != nil {
-				return fmt.Errorf("failed to add confirmation message: %v", handler.Error)
+			}); err != nil {
+				return err
 			}
-			slog.Info("Added confirmation message",
-				"uuid", message.Uuid,
-				"action", message.Action,
-				"payload", message.Payload,
+
+			slog.Info("Paired confirmation message",
+				"uuid", parsedMsg.uuid,
+				"payload", parsedMsg.payload,
 			)
-			span.AddEvent(handler.Message, trace.WithAttributes(
-				attribute.String("uuid", message.Uuid),
-				attribute.String("action", string(message.Action)),
+			span.AddEvent("paired confirmation message", trace.WithAttributes(
+				attribute.String("uuid", parsedMsg.uuid),
 			))
+
 			return nil
 		default:
 			return fmt.Errorf("unknown message type")
@@ -168,6 +194,7 @@ func (o *OcppMachine) parseRawMessage(msg []byte) (parsedMessage, error) {
 		if err != nil {
 			return parsedMessage{}, fmt.Errorf("failed to parse request body: %w", err)
 		}
+
 		return parsedMessage{
 			kind:    types.Request,
 			action:  &result.Action,
@@ -180,6 +207,7 @@ func (o *OcppMachine) parseRawMessage(msg []byte) (parsedMessage, error) {
 		if err != nil {
 			return parsedMessage{}, fmt.Errorf("failed to parse confirmation body: %w", err)
 		}
+
 		return parsedMessage{
 			kind:    types.Confirmation,
 			action:  nil,
@@ -255,32 +283,19 @@ func (o *OcppMachine) handleRequest(ctx context.Context, action types.ActionKind
 
 // Processes a OCPP confirmation message
 func (o *OcppMachine) handleConfirmation(ctx context.Context, uuid string, payload []byte) error {
-	actionKind, err := o.getActionKindFromUuid(uuid)
+	request, err := o.cache.GetRequestFromUuid(ctx, uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to find request: %v", err)
 	}
 
-	switch actionKind {
+	switch request.Action {
 	case types.ActionKind(types.Heartbeat):
 		return o.HandleHeartbeatConfirmation(ctx, payload)
 	case types.ActionKind(types.BootNotification):
-		return o.HandleBootNotificationConfirmation(ctx, payload)
+		return o.HandleBootNotificationConfirmation(ctx, request, payload)
 	default:
 		return fmt.Errorf("unknown message type")
 	}
-}
-
-// Retrieves the action kind from the state using the UUID.
-func (o *OcppMachine) getActionKindFromUuid(uuid string) (types.ActionKind, error) {
-	message, handler := o.store.GetRequestFromUuid(context.Background(), uuid)
-	if handler.Error != nil {
-		return types.ActionKind(""), fmt.Errorf("failed to find request: %v", handler.Error)
-	}
-	action := types.ActionKind(message.Action)
-	if !action.IsValid() {
-		return types.ActionKind(""), fmt.Errorf("invalid action kind: %s", message.Action)
-	}
-	return action, nil
 }
 
 // OCPP Commands
@@ -333,11 +348,12 @@ func (o *OcppMachine) HandleBootNotificationRequest(ctx context.Context, payload
 	slog.Debug("Received BootNotification Request",
 		slog.Any("payload", request),
 	)
+
 	return nil
 }
 
 // Handles a BootNotification confirmation.
-func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, payload []byte) error {
+func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, request types.RequestBody, payload []byte) error {
 	var confirmation types.BootNotificationConfirmation
 	if err := json.Unmarshal(payload, &confirmation); err != nil {
 		return err
@@ -349,5 +365,19 @@ func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, pa
 	slog.Debug("Received BootNotification Confirmation",
 		slog.Any("payload", confirmation),
 	)
+
+	var parsedRequest types.BootNotificationRequest
+	if err := json.Unmarshal(payload, &parsedRequest); err != nil {
+		return err
+	}
+	if err := types.Validate.Struct(parsedRequest); err != nil {
+		return err
+	}
+
+	if err := o.store.AddChargepoint(ctx, parsedRequest); err != nil {
+		slog.Error("Failed to add chargepoint", "error", err)
+		return fmt.Errorf("failed to add chargepoint: %w", err)
+	}
+
 	return nil
 }

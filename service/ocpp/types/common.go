@@ -42,6 +42,11 @@ func (a ActionKind) ToPtr() *ActionKind {
 	return nil
 }
 
+type Meta struct {
+	Id           string
+	Serialnumber string
+}
+
 // Represents a Message body in the OCPP.
 type MessageBody struct {
 	Kind    MessageKind // e.g. REQUEST or CONFIRMATION

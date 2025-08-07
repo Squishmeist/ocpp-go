@@ -2,10 +2,11 @@ package ocpp
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"log/slog"
 
 	"github.com/squishmeist/ocpp-go/internal/core"
-	"github.com/squishmeist/ocpp-go/internal/core/utils"
 	"github.com/squishmeist/ocpp-go/service/ocpp/db/schemas"
 	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"go.opentelemetry.io/otel/codes"
@@ -24,116 +25,33 @@ func NewDbStore(tp trace.TracerProvider, queries *schemas.Queries) *DbStore {
 	}
 }
 
-func (s *DbStore) GetRequestFromUuid(ctx context.Context, uuid string) (types.RequestBody, core.HandlerResponse) {
-	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.GetRequestFromUuid")
+func (s *DbStore) AddChargepoint(ctx context.Context, payload types.BootNotificationRequest) error {
+	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.AddChargepoint")
 	defer span.End()
 
-	response, err := s.queries.GetRequestMessageByUuid(ctx, uuid)
-	if err != nil {
-		return types.RequestBody{}, handleDBError(ctx, "to create chargepoint", err)
-	}
-	action := types.ActionKind(response.Action)
-	if !action.IsValid() {
-		return types.RequestBody{}, core.HandlerResponse{
-			Error:   utils.StringPtr("invalid action kind"),
-			Message: "invalid action kind",
-			TraceID: trace.SpanContextFromContext(ctx).TraceID().String(),
-		}
-	}
-
-	return types.RequestBody{
-			Uuid:    response.Uuid,
-			Action:  action,
-			Payload: []byte(response.Payload),
-		}, core.HandlerResponse{
-			Message: "request found",
-			TraceID: trace.SpanContextFromContext(ctx).TraceID().String(),
-		}
-}
-
-func (s *DbStore) AddRequestMessage(ctx context.Context, request types.RequestBody) (types.MessageBody, core.HandlerResponse) {
-	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.AddRequestMessage")
-	defer span.End()
-
-	response, err := s.queries.InsertMessage(ctx, schemas.InsertMessageParams{
-		Uuid:    request.Uuid,
-		Type:    "REQUEST",
-		Action:  string(request.Action),
-		Payload: string(request.Payload),
+	_, err := s.queries.InsertChargePoint(ctx, schemas.InsertChargePointParams{
+		SerialNumber:      payload.ChargeBoxSerialNumber,
+		Model:             payload.ChargePointModel,
+		Vendor:            payload.ChargePointVendor,
+		FirmwareVersion:   payload.FirmwareVersion,
+		Iicid:             sql.NullString{String: payload.Iccid, Valid: payload.Iccid != ""},
+		Imsi:              sql.NullString{String: payload.Imsi, Valid: payload.Imsi != ""},
+		MeterSerialNumber: sql.NullString{String: payload.MeterSerialNumber, Valid: payload.MeterSerialNumber != ""},
+		MeterType:         sql.NullString{String: payload.MeterType, Valid: payload.MeterType != ""},
+		LastBoot:          types.Now().Time,
 	})
 	if err != nil {
-		return types.MessageBody{}, handleDBError(ctx, "to add request message", err)
+		return handleDBError(ctx, "to add chargepoint", err)
 	}
 
-	action := types.ActionKind(response.Action)
-	if !action.IsValid() {
-		return types.MessageBody{}, core.HandlerResponse{
-			Error:   utils.StringPtr("invalid action kind"),
-			Message: "invalid action kind",
-			TraceID: trace.SpanContextFromContext(ctx).TraceID().String(),
-		}
-	}
-
-	return types.MessageBody{
-			Kind:    types.Confirmation,
-			Uuid:    response.Uuid,
-			Action:  action,
-			Payload: []byte(response.Payload),
-		}, core.HandlerResponse{
-			Message: "request added",
-			TraceID: trace.SpanContextFromContext(ctx).TraceID().String(),
-		}
+	return nil
 }
 
-func (s *DbStore) AddConfirmationMessage(ctx context.Context, payload types.ConfirmationBody) (types.MessageBody, core.HandlerResponse) {
-	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.AddConfirmationMessage")
-	defer span.End()
-
-	// Check for existing REQUEST with the same uuid
-	requestMsg, err := s.queries.GetRequestMessageByUuid(ctx, payload.Uuid)
-	if err != nil {
-		return types.MessageBody{}, handleDBError(ctx, "no matching REQUEST for confirmation", err)
-	}
-
-	response, err := s.queries.InsertMessage(ctx, schemas.InsertMessageParams{
-		Uuid:    payload.Uuid,
-		Type:    "CONFIRMATION",
-		Action:  requestMsg.Action,
-		Payload: string(payload.Payload),
-	})
-	if err != nil {
-		return types.MessageBody{}, handleDBError(ctx, "to add confirmation message", err)
-	}
-	action := types.ActionKind(response.Action)
-	if !action.IsValid() {
-		return types.MessageBody{}, core.HandlerResponse{
-			Error:   utils.StringPtr("invalid action kind"),
-			Message: "invalid action kind",
-			TraceID: trace.SpanContextFromContext(ctx).TraceID().String(),
-		}
-	}
-
-	return types.MessageBody{
-			Kind:    types.Confirmation,
-			Uuid:    response.Uuid,
-			Action:  action,
-			Payload: []byte(response.Payload),
-		}, core.HandlerResponse{
-			Message: "confirmation added",
-			TraceID: trace.SpanContextFromContext(ctx).TraceID().String(),
-		}
-}
-
-func handleDBError(ctx context.Context, operation string, err error) core.HandlerResponse {
+func handleDBError(ctx context.Context, operation string, err error) error {
 	slog.Error("failed "+operation, "error", err)
 	span := trace.SpanFromContext(ctx)
 	span.RecordError(err)
 	span.SetStatus(codes.Error, "failed "+operation)
 
-	errMsg := err.Error()
-	return core.HandlerResponse{
-		Error:   &errMsg,
-		Message: "failed " + operation,
-		TraceID: trace.SpanContextFromContext(ctx).TraceID().String(),
-	}
+	return fmt.Errorf("failed %s: %w", operation, err)
 }

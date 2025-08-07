@@ -9,6 +9,7 @@ import (
 	"github.com/squishmeist/ocpp-go/internal/core"
 	"github.com/squishmeist/ocpp-go/internal/core/utils"
 	"github.com/squishmeist/ocpp-go/service/ocpp/db"
+	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -78,11 +79,14 @@ func NewOcpp(opts ...OcppOption) *Ocpp {
 	queries, _, err := db.Connect(start.config.Database)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
+		panic(err)
 	}
 	store := NewDbStore(start.tracerProvider, queries)
+	cache := NewRedisCache(start.tracerProvider, "localhost:6379")
 
 	machine := NewOcppMachine(
 		WithTracerProvider(start.tracerProvider),
+		WithCache(cache),
 		WithStore(store),
 	)
 	start.machine = machine
@@ -116,13 +120,19 @@ func (o *Ocpp) handler() core.MessageHandler {
 			attribute.String("body", string(msg.Body)),
 		))
 
-		err := o.machine.HandleMessage(ctx, msg.Body)
+		err := o.machine.HandleMessage(ctx, types.Meta{
+			Id:           msg.MessageID,
+			Serialnumber: "test-serial",
+		}, msg.Body)
 		if err != nil {
+			slog.Error("Failed to handle message", "error", err)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			span.End()
 			return err
 		}
+
+		slog.Info("Message processed successfully")
 
 		if err := o.client.SendMessage(ctx, outbound.Name, &azservicebus.Message{
 			MessageID: &msg.MessageID,

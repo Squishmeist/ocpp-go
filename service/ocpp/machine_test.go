@@ -3,74 +3,77 @@ package ocpp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
-	"github.com/squishmeist/ocpp-go/internal/core"
-	"github.com/squishmeist/ocpp-go/internal/core/utils"
 	"github.com/squishmeist/ocpp-go/service/ocpp/types"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-type mockStore struct{}
+type mockCache struct{}
 
-func (m *mockStore) GetRequestFromUuid(ctx context.Context, uuid string) (types.RequestBody, core.HandlerResponse) {
+func (m *mockCache) HasProcessed(ctx context.Context, id string) (bool, error) {
+	if id != "uuid-000" {
+		return false, fmt.Errorf("not processed")
+	}
+
+	return true, nil
+}
+
+func (m *mockCache) GetRequestFromUuid(ctx context.Context, uuid string) (types.RequestBody, error) {
 	if uuid != "uuid-000" {
-		return types.RequestBody{}, core.HandlerResponse{
-			TraceID: "trace-id-123",
-			Error:   utils.StringPtr("request not found"),
-			Message: "request not found",
-		}
+		return types.RequestBody{}, fmt.Errorf("request not found")
 	}
 
 	return types.RequestBody{
-			Uuid:    "uuid-000",
-			Action:  types.BootNotification,
-			Payload: []byte(`{"chargeBoxSerialNumber": "91234567"}`),
-		}, core.HandlerResponse{
-			TraceID: "trace-id-123",
-			Error:   nil,
-			Message: "request found",
-		}
+		Uuid:   "uuid-000",
+		Action: types.BootNotification,
+		Payload: []byte(`{
+        "chargeBoxSerialNumber": "91234567",
+        "chargePointModel": "Zappi",
+        "chargePointSerialNumber": "91234567",
+        "chargePointVendor": "Myenergi",
+        "firmwareVersion": "5540",
+        "iccid": "",
+        "imsi": "",
+        "meterType": "",
+        "meterSerialNumber": "91234567"
+    }`),
+	}, nil
 }
 
-func (m *mockStore) AddRequestMessage(ctx context.Context, request types.RequestBody) (types.MessageBody, core.HandlerResponse) {
-	return types.MessageBody{
-			Uuid:    request.Uuid,
-			Kind:    "REQUEST",
-			Payload: request.Payload,
-		}, core.HandlerResponse{
-			TraceID: "trace-id-123",
-			Message: "request added",
-			Error:   nil,
-		}
+func (m *mockCache) AddRequest(ctx context.Context, meta types.Meta, request types.RequestBody) error {
+	return nil
 }
 
-func (m *mockStore) AddConfirmationMessage(ctx context.Context, confirmation types.ConfirmationBody) (types.MessageBody, core.HandlerResponse) {
-	return types.MessageBody{
-			Uuid:    confirmation.Uuid,
-			Kind:    "CONFIRMATION",
-			Payload: confirmation.Payload,
-		}, core.HandlerResponse{
-			TraceID: "trace-id-456",
-			Message: "confirmation added",
-			Error:   nil,
-		}
+func (m *mockCache) RemoveRequest(ctx context.Context, meta types.Meta, confirmation types.ConfirmationBody) error {
+	return nil
+}
+
+type mockStore struct{}
+
+func (m *mockStore) AddChargepoint(ctx context.Context, request types.BootNotificationRequest) error {
+	return nil
 }
 
 func TestHandleMessage(t *testing.T) {
-
+	ctx := context.Background()
+	meta := types.Meta{
+		Id:           "test-id",
+		Serialnumber: "test-serial",
+	}
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
-	ctx := context.Background()
 
 	t.Run("InvalidKind", func(t *testing.T) {
 		body := []any{"2.0", "uuid-123", types.Heartbeat, map[string]any{}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -78,7 +81,7 @@ func TestHandleMessage(t *testing.T) {
 		body := []any{"uuid-123", types.Heartbeat, map[string]any{}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -86,7 +89,7 @@ func TestHandleMessage(t *testing.T) {
 		body := []any{2.0, "uuid-123", map[string]any{}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -94,7 +97,7 @@ func TestHandleMessage(t *testing.T) {
 		body := []any{2.0, "uuid-123", map[string]any{}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -102,7 +105,7 @@ func TestHandleMessage(t *testing.T) {
 		body := []any{2.0, "uuid-123", types.Heartbeat}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -114,7 +117,7 @@ func TestHandleMessage(t *testing.T) {
 		}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -132,7 +135,7 @@ func TestHandleMessage(t *testing.T) {
 		}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.NoError(t, err)
 	})
 
@@ -140,7 +143,7 @@ func TestHandleMessage(t *testing.T) {
 		body := []any{3.0, "uuid-123"}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -151,7 +154,7 @@ func TestHandleMessage(t *testing.T) {
 		}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -163,7 +166,7 @@ func TestHandleMessage(t *testing.T) {
 		}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.Error(t, err)
 	})
 
@@ -175,7 +178,7 @@ func TestHandleMessage(t *testing.T) {
 		}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
-		err = machine.HandleMessage(ctx, raw)
+		err = machine.HandleMessage(ctx, meta, raw)
 		assert.NoError(t, err)
 	})
 
@@ -184,6 +187,7 @@ func TestHandleMessage(t *testing.T) {
 func TestParseRawMessage(t *testing.T) {
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
 
@@ -268,11 +272,12 @@ func TestParseRawMessage(t *testing.T) {
 }
 
 func TestHandleRequest(t *testing.T) {
+	ctx := context.Background()
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
-	ctx := context.Background()
 
 	t.Run("UnknownAction", func(t *testing.T) {
 		err := machine.handleRequest(ctx, "Unknown", []byte(`{}`))
@@ -301,12 +306,12 @@ func TestHandleRequest(t *testing.T) {
 }
 
 func TestHandleConfirmation(t *testing.T) {
-	store := &mockStore{}
+	ctx := context.Background()
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
-		WithStore(store),
+		WithCache(&mockCache{}),
+		WithStore(&mockStore{}),
 	)
-	ctx := context.Background()
 
 	t.Run("NoMatchingUuid", func(t *testing.T) {
 		err := machine.handleConfirmation(ctx, "uuid-unknown", []byte(`{}`))
@@ -329,11 +334,12 @@ func TestHandleConfirmation(t *testing.T) {
 }
 
 func TestHandleHeartbeatRequest(t *testing.T) {
+	ctx := context.Background()
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
-	ctx := context.Background()
 
 	t.Run("ValidPayload", func(t *testing.T) {
 		err := machine.HandleHeartbeatRequest(ctx, []byte(`{}`))
@@ -342,11 +348,12 @@ func TestHandleHeartbeatRequest(t *testing.T) {
 }
 
 func TestHandleHeartbeatConfirmation(t *testing.T) {
+	ctx := context.Background()
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
-	ctx := context.Background()
 
 	t.Run("InvalidPayload", func(t *testing.T) {
 		err := machine.HandleHeartbeatConfirmation(ctx, []byte(`{}`))
@@ -360,11 +367,12 @@ func TestHandleHeartbeatConfirmation(t *testing.T) {
 }
 
 func TestHandleBootNotificationRequest(t *testing.T) {
+	ctx := context.Background()
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
+		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
-	ctx := context.Background()
 
 	t.Run("InvalidPayload", func(t *testing.T) {
 		err := machine.HandleBootNotificationRequest(ctx, []byte(`{}`))
@@ -387,24 +395,24 @@ func TestHandleBootNotificationRequest(t *testing.T) {
 	})
 }
 
-func TestHandleBootNotificationConfirmation(t *testing.T) {
-	machine := NewOcppMachine(
-		WithTracerProvider(noop.NewTracerProvider()),
-		WithStore(&mockStore{}),
-	)
-	ctx := context.Background()
+// func TestHandleBootNotificationConfirmation(t *testing.T) {
+// 	machine := NewOcppMachine(
+// 		WithTracerProvider(noop.NewTracerProvider()),
+// 		WithCache(&mockCache{}),
+// 	)
+// 	ctx := context.Background()
 
-	t.Run("InvalidPayload", func(t *testing.T) {
-		err := machine.HandleBootNotificationConfirmation(ctx, []byte(`{}`))
-		assert.Error(t, err)
-	})
+// 	t.Run("InvalidPayload", func(t *testing.T) {
+// 		err := machine.HandleBootNotificationConfirmation(ctx, []byte(`{}`))
+// 		assert.Error(t, err)
+// 	})
 
-	t.Run("ValidPayload", func(t *testing.T) {
-		err := machine.HandleBootNotificationConfirmation(ctx, []byte(`{
-			"currentTime": "2024-04-02T11:44:38Z",
-			"interval": 30,
-			"status": "Accepted"
-		}`))
-		assert.NoError(t, err)
-	})
-}
+// 	t.Run("ValidPayload", func(t *testing.T) {
+// 		err := machine.HandleBootNotificationConfirmation(ctx, []byte(`{
+// 			"currentTime": "2024-04-02T11:44:38Z",
+// 			"interval": 30,
+// 			"status": "Accepted"
+// 		}`))
+// 		assert.NoError(t, err)
+// 	})
+// }

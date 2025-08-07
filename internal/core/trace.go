@@ -18,3 +18,15 @@ func TraceDB(ctx context.Context, tracer trace.Tracer, operationName string) (co
 
 	return ctx, span
 }
+
+func TraceCache(ctx context.Context, tracer trace.Tracer, operationName string) (context.Context, trace.Span) {
+	ctx, span := tracer.Start(ctx, operationName,
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(attribute.KeyValue{
+			Key:   attribute.Key("cache.name"),
+			Value: attribute.StringValue("redis"),
+		}),
+	)
+
+	return ctx, span
+}
