@@ -1,4 +1,4 @@
-.PHONY: azure-service-bus redis ocpp send-message sqlc dev test test-coverage start stop
+.PHONY: azure-service-bus redis ocpp message sqlc proto dev test test-coverage start stop
 
 azure-service-bus:
 	docker compose -f ./azure-service-bus/docker-compose.yaml up -d
@@ -9,11 +9,16 @@ redis:
 ocpp:
 	go run -v ./cmd/ocpp/main.go
 
-send-message:
-	go run -v ./cmd/azure-service-bus/main.go
+message:
+	go run -v ./cmd/message/main.go
 
 sqlc:
 	cd ./service/ocpp/db && sqlc generate
+
+proto:
+	protoc --go_out=./pkg --go_opt=paths=source_relative \
+		--go-grpc_out=./pkg --go-grpc_opt=paths=source_relative \
+		api/proto/ocpp/v1/ocpp.proto
 
 test:
 	gotestsum
@@ -28,7 +33,7 @@ dev:
 start:
 	$(MAKE) azure-service-bus
 	$(MAKE) redis
-	$(MAKE) send-message
+	$(MAKE) message
 
 stop:
 	@echo "Stopping all services..."
