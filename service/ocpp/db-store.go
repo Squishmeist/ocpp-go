@@ -29,7 +29,7 @@ func (s *DbStore) AddChargepoint(ctx context.Context, payload types.BootNotifica
 	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.AddChargepoint")
 	defer span.End()
 
-	_, err := s.queries.InsertChargePoint(ctx, schemas.InsertChargePointParams{
+	_, err := s.queries.InsertChargepoint(ctx, schemas.InsertChargepointParams{
 		SerialNumber:      payload.ChargeBoxSerialNumber,
 		Model:             payload.ChargePointModel,
 		Vendor:            payload.ChargePointVendor,
@@ -42,6 +42,24 @@ func (s *DbStore) AddChargepoint(ctx context.Context, payload types.BootNotifica
 	})
 	if err != nil {
 		return handleDBError(ctx, "to add chargepoint", err)
+	}
+
+	return nil
+}
+
+func (s *DbStore) UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload types.HeartbeatConfirmation) error {
+	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.UpdateLastHeartbeat")
+	defer span.End()
+
+	result, err := s.queries.UpdateChargepointLastHeartbeat(ctx, schemas.UpdateChargepointLastHeartbeatParams{
+		SerialNumber:  serialnumber,
+		LastHeartbeat: sql.NullTime{Time: payload.CurrentTime.Time, Valid: true},
+	})
+	if err != nil {
+		return handleDBError(ctx, "to update last heartbeat", err)
+	}
+	if result == "" {
+		return fmt.Errorf("serial number %s not found", serialnumber)
 	}
 
 	return nil

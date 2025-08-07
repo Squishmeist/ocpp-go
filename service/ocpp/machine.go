@@ -135,7 +135,7 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta types.Meta, msg []
 			))
 			return nil
 		case types.Confirmation:
-			if err := o.handleConfirmation(ctx, parsedMsg.uuid, parsedMsg.payload); err != nil {
+			if err := o.handleConfirmation(ctx, meta, parsedMsg.uuid, parsedMsg.payload); err != nil {
 				return err
 			}
 
@@ -282,7 +282,7 @@ func (o *OcppMachine) handleRequest(ctx context.Context, action types.ActionKind
 }
 
 // Processes a OCPP confirmation message
-func (o *OcppMachine) handleConfirmation(ctx context.Context, uuid string, payload []byte) error {
+func (o *OcppMachine) handleConfirmation(ctx context.Context, meta types.Meta, uuid string, payload []byte) error {
 	request, err := o.cache.GetRequestFromUuid(ctx, uuid)
 	if err != nil {
 		return fmt.Errorf("failed to find request: %v", err)
@@ -290,7 +290,7 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, uuid string, paylo
 
 	switch request.Action {
 	case types.ActionKind(types.Heartbeat):
-		return o.HandleHeartbeatConfirmation(ctx, payload)
+		return o.HandleHeartbeatConfirmation(ctx, meta, payload)
 	case types.ActionKind(types.BootNotification):
 		return o.HandleBootNotificationConfirmation(ctx, request, payload)
 	default:
@@ -320,7 +320,7 @@ func (o *OcppMachine) HandleHeartbeatRequest(ctx context.Context, payload []byte
 }
 
 // Handles a Heartbeat confirmation.
-func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, payload []byte) error {
+func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, meta types.Meta, payload []byte) error {
 	var confirmation types.HeartbeatConfirmation
 	if err := json.Unmarshal(payload, &confirmation); err != nil {
 		return err
@@ -332,6 +332,11 @@ func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, payload [
 	slog.Debug("Received Heartbeat Confirmation",
 		slog.Any("payload", confirmation),
 	)
+
+	if err := o.store.UpdateLastHeartbeat(ctx, meta.Serialnumber, confirmation); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -375,8 +380,7 @@ func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, re
 	}
 
 	if err := o.store.AddChargepoint(ctx, parsedRequest); err != nil {
-		slog.Error("Failed to add chargepoint", "error", err)
-		return fmt.Errorf("failed to add chargepoint: %w", err)
+		return err
 	}
 
 	return nil

@@ -115,14 +115,26 @@ func (o *Ocpp) handler() core.MessageHandler {
 	return func(ctx context.Context, topic, subscription string, msg *azservicebus.ReceivedMessage) error {
 		ctx, span := o.tracerProvider.Tracer("ocpp").Start(ctx, "processMessage", trace.WithAttributes(
 			attribute.String("id", msg.MessageID),
+			attribute.String("serialnumber", msg.ApplicationProperties["serialnumber"].(string)),
 			attribute.String("topic", inbound.Name),
 			attribute.String("subscription", inbound.Subscription),
 			attribute.String("body", string(msg.Body)),
 		))
+		defer span.End()
+
+		serialnumber, ok := msg.ApplicationProperties["serialnumber"].(string)
+		if !ok {
+			err := fmt.Errorf("serialnumber not found in message properties")
+			slog.Error("Failed to process message", "error", err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			span.End()
+			return err
+		}
 
 		err := o.machine.HandleMessage(ctx, types.Meta{
 			Id:           msg.MessageID,
-			Serialnumber: "test-serial",
+			Serialnumber: serialnumber,
 		}, msg.Body)
 		if err != nil {
 			slog.Error("Failed to handle message", "error", err)
@@ -135,8 +147,10 @@ func (o *Ocpp) handler() core.MessageHandler {
 		slog.Info("Message processed successfully")
 
 		if err := o.client.SendMessage(ctx, outbound.Name, &azservicebus.Message{
-			MessageID: &msg.MessageID,
-			Body:      []byte(`{"status": "processed", "response": { }}`),
+			ApplicationProperties: map[string]any{
+				"serialnumber": serialnumber,
+			},
+			Body: []byte(`{"status": "processed", "response": { }}`),
 		}); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())

@@ -57,22 +57,31 @@ func NewMessageService(opts ...MessageOption) *MessageService {
 
 func (s *MessageService) HeartbeatRequest(ctx context.Context, payload *ocpppb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
 		Body: []byte(`[2, "uuid-1", "Heartbeat", {}]`),
 	})
 }
 
 func (s *MessageService) HeartbeatConfirmation(ctx context.Context, payload *ocpppb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
 		Body: []byte(`[3, "uuid-1", { "currentTime": "2025-07-22T11:25:25.230Z" }]`),
 	})
 }
 
 func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *ocpppb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
 		Body: []byte(`[2,"uuid-2", "BootNotification",{
-            "chargeBoxSerialNumber": "91234567",
+            "chargeBoxSerialNumber": "123456789",
             "chargePointModel": "Zappi",
-            "chargePointSerialNumber": "91234567",
+            "chargePointSerialNumber": "123456789",
             "chargePointVendor": "Myenergi",
             "firmwareVersion": "5540",
             "iccid": "",
@@ -85,6 +94,9 @@ func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *o
 
 func (s *MessageService) BootNotificationConfirmation(ctx context.Context, payload *ocpppb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
 		Body: []byte(`[3,"uuid-2",{
             "currentTime": "2024-04-02T11:44:38Z",
             "interval": 30,

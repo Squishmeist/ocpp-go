@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const insertChargePoint = `-- name: InsertChargePoint :one
+const insertChargepoint = `-- name: InsertChargepoint :one
 INSERT INTO chargepoint (
     serial_number,
     model,
@@ -28,7 +28,7 @@ INSERT INTO chargepoint (
 RETURNING serial_number, model, vendor, firmware_version, iicid, imsi, meter_serial_number, meter_type, last_boot, last_heartbeat, last_connected
 `
 
-type InsertChargePointParams struct {
+type InsertChargepointParams struct {
 	SerialNumber      string
 	Model             string
 	Vendor            string
@@ -42,8 +42,8 @@ type InsertChargePointParams struct {
 	LastConnected     sql.NullTime
 }
 
-func (q *Queries) InsertChargePoint(ctx context.Context, arg InsertChargePointParams) (Chargepoint, error) {
-	row := q.db.QueryRowContext(ctx, insertChargePoint,
+func (q *Queries) InsertChargepoint(ctx context.Context, arg InsertChargepointParams) (Chargepoint, error) {
+	row := q.db.QueryRowContext(ctx, insertChargepoint,
 		arg.SerialNumber,
 		arg.Model,
 		arg.Vendor,
@@ -71,4 +71,23 @@ func (q *Queries) InsertChargePoint(ctx context.Context, arg InsertChargePointPa
 		&i.LastConnected,
 	)
 	return i, err
+}
+
+const updateChargepointLastHeartbeat = `-- name: UpdateChargepointLastHeartbeat :one
+UPDATE chargepoint 
+SET last_heartbeat = ?
+WHERE serial_number = ?
+RETURNING serial_number
+`
+
+type UpdateChargepointLastHeartbeatParams struct {
+	LastHeartbeat sql.NullTime
+	SerialNumber  string
+}
+
+func (q *Queries) UpdateChargepointLastHeartbeat(ctx context.Context, arg UpdateChargepointLastHeartbeatParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, updateChargepointLastHeartbeat, arg.LastHeartbeat, arg.SerialNumber)
+	var serial_number string
+	err := row.Scan(&serial_number)
+	return serial_number, err
 }

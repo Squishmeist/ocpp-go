@@ -265,6 +265,10 @@ func TestHandleRequest(t *testing.T) {
 
 func TestHandleConfirmation(t *testing.T) {
 	ctx, machine := setupMachineTest(t)
+	meta := types.Meta{
+		Id:           "test-id",
+		Serialnumber: "test-serial",
+	}
 
 	err := machine.cache.AddRequest(ctx, types.Meta{
 		Id:           "test-id",
@@ -287,17 +291,17 @@ func TestHandleConfirmation(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("NoMatchingUuid", func(t *testing.T) {
-		err := machine.handleConfirmation(ctx, "uuid-unknown", []byte(`{}`))
+		err := machine.handleConfirmation(ctx, meta, "uuid-unknown", []byte(`{}`))
 		assert.Error(t, err)
 	})
 
 	t.Run("InvalidPayload", func(t *testing.T) {
-		err := machine.handleConfirmation(ctx, "uuid-000", []byte(`{"invalid": "payload"}`))
+		err := machine.handleConfirmation(ctx, meta, "uuid-000", []byte(`{"invalid": "payload"}`))
 		assert.Error(t, err)
 	})
 
 	t.Run("ValidPayload", func(t *testing.T) {
-		err := machine.handleConfirmation(ctx, "uuid-123", []byte(`{
+		err := machine.handleConfirmation(ctx, meta, "uuid-123", []byte(`{
 			"currentTime": "2024-04-02T11:44:38Z",
 			"interval": 30,
 			"status": "Accepted"
@@ -317,14 +321,18 @@ func TestHandleHeartbeatRequest(t *testing.T) {
 
 func TestHandleHeartbeatConfirmation(t *testing.T) {
 	ctx, machine := setupMachineTest(t)
+	meta := types.Meta{
+		Id:           "test-id",
+		Serialnumber: "test-serial",
+	}
 
 	t.Run("InvalidPayload", func(t *testing.T) {
-		err := machine.HandleHeartbeatConfirmation(ctx, []byte(`{}`))
+		err := machine.HandleHeartbeatConfirmation(ctx, meta, []byte(`{}`))
 		assert.Error(t, err)
 	})
 
 	t.Run("ValidPayload", func(t *testing.T) {
-		err := machine.HandleHeartbeatConfirmation(ctx, []byte(`{"currentTime": "2025-07-24T12:34:56Z"}`))
+		err := machine.HandleHeartbeatConfirmation(ctx, meta, []byte(`{"currentTime": "2025-07-24T12:34:56Z"}`))
 		assert.NoError(t, err)
 	})
 }
@@ -441,6 +449,10 @@ type mockStore struct {
 }
 
 func (m *mockStore) AddChargepoint(ctx context.Context, request types.BootNotificationRequest) error {
+	return nil
+}
+
+func (m *mockStore) UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload types.HeartbeatConfirmation) error {
 	return nil
 }
 

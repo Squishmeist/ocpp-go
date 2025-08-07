@@ -1,4 +1,4 @@
--- name: InsertChargePoint :one
+-- name: InsertChargepoint :one
 INSERT INTO chargepoint (
     serial_number,
     model,
@@ -13,3 +13,9 @@ INSERT INTO chargepoint (
     last_connected
 ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
 RETURNING *;
+
+-- name: UpdateChargepointLastHeartbeat :one
+UPDATE chargepoint 
+SET last_heartbeat = ?
+WHERE serial_number = ?
+RETURNING serial_number;

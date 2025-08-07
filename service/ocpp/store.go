@@ -8,6 +8,7 @@ import (
 
 type StoreAdapter interface {
 	AddChargepoint(ctx context.Context, payload types.BootNotificationRequest) error
+	UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload types.HeartbeatConfirmation) error
 }
 
 type CacheAdapter interface {
