@@ -1,7 +1,10 @@
-.PHONY: azure-service-bus ocpp send-message sqlc dev test test-coverage start
+.PHONY: azure-service-bus redis ocpp send-message sqlc dev test test-coverage start stop
 
 azure-service-bus:
 	docker compose -f ./azure-service-bus/docker-compose.yaml up -d
+
+redis:
+	docker compose -f ./redis/docker-compose.yaml up -d
 
 ocpp:
 	go run -v ./cmd/ocpp/main.go
@@ -19,10 +22,16 @@ test-coverage:
 	gotestsum -- -coverprofile=cover.out ./...
 
 dev:
-	@echo "1. Run 'make azure-service-bus' to start the emulator"
-	@echo "2. Run 'make ocpp' to start the OCPP listener"
-	@echo "3. Run 'make send-message ARGS=heartbeatrequest' to send a message"
+	@echo "1. Run 'make start' to start the Azure Service Bus and Redis server"
+	@echo "2. Run 'make ocpp' to start the OCPP machine"
 
 start:
 	$(MAKE) azure-service-bus
+	$(MAKE) redis
 	$(MAKE) send-message
+
+stop:
+	@echo "Stopping all services..."
+	docker compose -f ./azure-service-bus/docker-compose.yaml down
+	docker compose -f ./redis/docker-compose.yaml down
+	@echo "All services stopped."

@@ -9,19 +9,8 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-func setupRedisTest(t *testing.T) (*RedisCache, context.Context) {
-	ctx := context.Background()
-	redis := NewRedisCache(noop.NewTracerProvider(), "localhost:6379")
-
-	// Test connection
-	err := redis.client.Ping(ctx).Err()
-	assert.Nil(t, err, "expected successful connection to Redis")
-
-	return redis, ctx
-}
-
 func TestRedisCache(t *testing.T) {
-	redis, ctx := setupRedisTest(t)
+	ctx, redis := setupRedisTest(t)
 
 	// Add a request
 	err := redis.AddRequest(ctx, types.Meta{
@@ -50,19 +39,19 @@ func TestRedisCache(t *testing.T) {
 		}
 	})
 
-	t.Run("HasProcessed - Unknown Id", func(t *testing.T) {
+	t.Run("HasProcessed_Unknown Id", func(t *testing.T) {
 		processed, err := redis.HasProcessed(ctx, "unknown-id")
 		assert.Nil(t, err, "expected no error for unknown id")
 		assert.False(t, processed, "expected processed to be false for unknown id")
 	})
 
-	t.Run("HasProcessed - Known Id", func(t *testing.T) {
+	t.Run("HasProcessed_Known Id", func(t *testing.T) {
 		processed, err := redis.HasProcessed(ctx, "test-id")
 		assert.Nil(t, err, "expected no error for valid id")
 		assert.True(t, processed, "expected processed to be true for valid id")
 	})
 
-	t.Run("AddRequest - Valid", func(t *testing.T) {
+	t.Run("AddRequest_Valid", func(t *testing.T) {
 		err := redis.AddRequest(ctx, types.Meta{
 			Id:           "test-id2",
 			Serialnumber: "test-serialnumber",
@@ -74,7 +63,7 @@ func TestRedisCache(t *testing.T) {
 		assert.NoError(t, err, "expected no error for valid input")
 	})
 
-	t.Run("RemoveRequest - Valid", func(t *testing.T) {
+	t.Run("RemoveRequest_Valid", func(t *testing.T) {
 		err := redis.AddRequest(ctx, types.Meta{
 			Id:           "test-id3",
 			Serialnumber: "test-serialnumber",
@@ -94,7 +83,7 @@ func TestRedisCache(t *testing.T) {
 		assert.NoError(t, err, "expected no error for valid input")
 	})
 
-	t.Run("RemoveRequest - Unknown", func(t *testing.T) {
+	t.Run("RemoveRequest_Unknown", func(t *testing.T) {
 		err := redis.RemoveRequest(ctx, types.Meta{
 			Id:           "test-unknown",
 			Serialnumber: "test-serialnumber",
@@ -104,7 +93,7 @@ func TestRedisCache(t *testing.T) {
 		assert.Error(t, err, "expected error for unknown uuid")
 	})
 
-	t.Run("GetRequestFromUuid - Valid", func(t *testing.T) {
+	t.Run("GetRequestFromUuid_Valid", func(t *testing.T) {
 		request, err := redis.GetRequestFromUuid(ctx, "test-uuid")
 		assert.NoError(t, err, "expected no error for valid input")
 		assert.Equal(t, "test-uuid", request.Uuid)
@@ -112,8 +101,19 @@ func TestRedisCache(t *testing.T) {
 		assert.Equal(t, []byte("{}"), request.Payload)
 	})
 
-	t.Run("GetRequestFromUuid - Unknown", func(t *testing.T) {
+	t.Run("GetRequestFromUuid_Unknown", func(t *testing.T) {
 		_, err := redis.GetRequestFromUuid(ctx, "unknown-uuid")
 		assert.Error(t, err, "expected error for unknown uuid")
 	})
+}
+
+func setupRedisTest(t *testing.T) (context.Context, *RedisCache) {
+	ctx := context.Background()
+	redis := NewRedisCache(noop.NewTracerProvider(), "localhost:6379")
+
+	// Test connection
+	err := redis.client.Ping(ctx).Err()
+	assert.Nil(t, err, "expected successful connection to Redis")
+
+	return ctx, redis
 }

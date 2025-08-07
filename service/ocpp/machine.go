@@ -367,7 +367,7 @@ func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, re
 	)
 
 	var parsedRequest types.BootNotificationRequest
-	if err := json.Unmarshal(payload, &parsedRequest); err != nil {
+	if err := json.Unmarshal(request.Payload, &parsedRequest); err != nil {
 		return err
 	}
 	if err := types.Validate.Struct(parsedRequest); err != nil {

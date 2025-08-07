@@ -11,44 +11,6 @@ import (
 	"time"
 )
 
-const getMessagesByUuid = `-- name: GetMessagesByUuid :one
-SELECT uuid, type, created_at, "action", payload
-FROM message
-WHERE uuid = ?
-`
-
-func (q *Queries) GetMessagesByUuid(ctx context.Context, uuid string) (Message, error) {
-	row := q.db.QueryRowContext(ctx, getMessagesByUuid, uuid)
-	var i Message
-	err := row.Scan(
-		&i.Uuid,
-		&i.Type,
-		&i.CreatedAt,
-		&i.Action,
-		&i.Payload,
-	)
-	return i, err
-}
-
-const getRequestMessageByUuid = `-- name: GetRequestMessageByUuid :one
-SELECT uuid, type, created_at, "action", payload
-FROM message
-WHERE uuid = ? AND type = 'REQUEST'
-`
-
-func (q *Queries) GetRequestMessageByUuid(ctx context.Context, uuid string) (Message, error) {
-	row := q.db.QueryRowContext(ctx, getRequestMessageByUuid, uuid)
-	var i Message
-	err := row.Scan(
-		&i.Uuid,
-		&i.Type,
-		&i.CreatedAt,
-		&i.Action,
-		&i.Payload,
-	)
-	return i, err
-}
-
 const insertChargePoint = `-- name: InsertChargePoint :one
 INSERT INTO chargepoint (
     serial_number,
@@ -107,41 +69,6 @@ func (q *Queries) InsertChargePoint(ctx context.Context, arg InsertChargePointPa
 		&i.LastBoot,
 		&i.LastHeartbeat,
 		&i.LastConnected,
-	)
-	return i, err
-}
-
-const insertMessage = `-- name: InsertMessage :one
-INSERT INTO message (
-    uuid,
-    type,
-    action,
-    payload
-) VALUES (?,?,?,?)
-RETURNING uuid, type, created_at, "action", payload
-`
-
-type InsertMessageParams struct {
-	Uuid    string
-	Type    string
-	Action  string
-	Payload string
-}
-
-func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error) {
-	row := q.db.QueryRowContext(ctx, insertMessage,
-		arg.Uuid,
-		arg.Type,
-		arg.Action,
-		arg.Payload,
-	)
-	var i Message
-	err := row.Scan(
-		&i.Uuid,
-		&i.Type,
-		&i.CreatedAt,
-		&i.Action,
-		&i.Payload,
 	)
 	return i, err
 }

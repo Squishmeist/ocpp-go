@@ -22,11 +22,3 @@ type Chargepoint struct {
 	LastHeartbeat     sql.NullTime
 	LastConnected     sql.NullTime
 }
-
-type Message struct {
-	Uuid      string
-	Type      string
-	CreatedAt time.Time
-	Action    string
-	Payload   string
-}

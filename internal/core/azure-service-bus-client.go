@@ -110,8 +110,8 @@ func (c *AzureServiceBusClient) ReceiveMessage(
 		for _, msg := range messages {
 			if err := handler(ctx, topic, subscription, msg); err != nil {
 				slog.Error("Azure Client, handler failed to handle message", "error", err)
+				receiver.AbandonMessage(ctx, msg, nil)
 			}
-			// TODO: dont use this in production
 			receiver.CompleteMessage(ctx, msg, nil)
 		}
 	}
