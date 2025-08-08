@@ -132,7 +132,7 @@ func (o *Ocpp) handler() core.MessageHandler {
 			return err
 		}
 
-		err := o.machine.HandleMessage(ctx, v16.Meta{
+		body, err := o.machine.HandleMessage(ctx, v16.Meta{
 			Id:           msg.MessageID,
 			Serialnumber: serialnumber,
 		}, msg.Body)
@@ -150,7 +150,7 @@ func (o *Ocpp) handler() core.MessageHandler {
 			ApplicationProperties: map[string]any{
 				"serialnumber": serialnumber,
 			},
-			Body: []byte(`{"status": "processed", "response": { }}`),
+			Body: body,
 		}); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())

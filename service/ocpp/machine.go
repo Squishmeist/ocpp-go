@@ -77,7 +77,7 @@ func NewOcppMachine(opts ...OcppMachineOption) *OcppMachine {
 }
 
 // Handles an incoming OCPP message.
-func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []byte) error {
+func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []byte) ([]byte, error) {
 	ctx, span := o.TracerProvider.Tracer("ocpp").Start(ctx, "HandleMessage")
 	defer span.End()
 
@@ -86,13 +86,13 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 		err := fmt.Errorf("failed to process message: %v", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return nil, err
 	}
 
 	if processed {
 		slog.Info("Message already processed", "id", meta.Id)
 		span.SetStatus(codes.Ok, "Message already processed")
-		return nil
+		return nil, nil
 	}
 
 	select {
@@ -100,31 +100,23 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 		// TODO: handle context shutdown
 		span.RecordError(ctx.Err())
 		span.SetStatus(codes.Error, ctx.Err().Error())
-		return ctx.Err()
+		return nil, ctx.Err()
 	default:
 		parsedMsg, err := o.parseRawMessage(msg)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			span.AddEvent("error parsing message")
-			return err
+			return nil, err
 		}
 		span.AddEvent("parsed message")
 
 		switch parsedMsg.kind {
 		case v16.Request:
-			if err := o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload); err != nil {
-				return err
+			body, err := o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload)
+			if err != nil {
+				return nil, err
 			}
-
-			if err := o.cache.AddRequest(ctx, meta, v16.RequestBody{
-				Uuid:    parsedMsg.uuid,
-				Action:  *parsedMsg.action,
-				Payload: parsedMsg.payload,
-			}); err != nil {
-				return err
-			}
-
 			slog.Info("Added request message",
 				"action", *parsedMsg.action,
 				"uuid", parsedMsg.uuid,
@@ -134,19 +126,11 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 				attribute.String("action", string(*parsedMsg.action)),
 				attribute.String("uuid", parsedMsg.uuid),
 			))
-			return nil
+			return body, nil
 		case v16.Confirmation:
 			if err := o.handleConfirmation(ctx, meta, parsedMsg.uuid, parsedMsg.payload); err != nil {
-				return err
+				return nil, err
 			}
-
-			if err := o.cache.RemoveRequest(ctx, meta, v16.ConfirmationBody{
-				Uuid:    parsedMsg.uuid,
-				Payload: parsedMsg.payload,
-			}); err != nil {
-				return err
-			}
-
 			slog.Info("Paired confirmation message",
 				"uuid", parsedMsg.uuid,
 				"payload", parsedMsg.payload,
@@ -154,10 +138,9 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 			span.AddEvent("paired confirmation message", trace.WithAttributes(
 				attribute.String("uuid", parsedMsg.uuid),
 			))
-
-			return nil
+			return nil, nil
 		default:
-			return fmt.Errorf("unknown message type")
+			return nil, fmt.Errorf("unknown message type")
 		}
 	}
 }
@@ -195,7 +178,6 @@ func (o *OcppMachine) parseRawMessage(msg []byte) (parsedMessage, error) {
 		if err != nil {
 			return parsedMessage{}, fmt.Errorf("failed to parse request body: %w", err)
 		}
-
 		return parsedMessage{
 			kind:    v16.Request,
 			action:  &result.Action,
@@ -208,7 +190,6 @@ func (o *OcppMachine) parseRawMessage(msg []byte) (parsedMessage, error) {
 		if err != nil {
 			return parsedMessage{}, fmt.Errorf("failed to parse confirmation body: %w", err)
 		}
-
 		return parsedMessage{
 			kind:    v16.Confirmation,
 			action:  nil,
@@ -265,19 +246,23 @@ func (o *OcppMachine) parseConfirmationBody(uuid string, arr []any) (v16.Confirm
 }
 
 // Processes a OCPP request message
-func (o *OcppMachine) handleRequest(ctx context.Context, action v16.ActionKind, payload []byte) error {
+func (o *OcppMachine) handleRequest(ctx context.Context, action v16.ActionKind, payload []byte) ([]byte, error) {
 	select {
 	case <-ctx.Done():
 		// TODO: handle context shutdown
-		return ctx.Err()
+		return nil, ctx.Err()
 	default:
 		switch action {
 		case v16.ActionKind(core.Heartbeat):
-			return o.HandleHeartbeatRequest(ctx, payload)
+			return nil, o.handleHeartbeatRequest(ctx, payload)
 		case v16.ActionKind(core.BootNotification):
-			return o.HandleBootNotificationRequest(ctx, payload)
+			body, err := o.handleBootNotificationRequest(ctx, payload)
+			if err != nil {
+				return nil, err
+			}
+			return json.Marshal(body)
 		default:
-			return fmt.Errorf("unknown message type")
+			return nil, fmt.Errorf("unknown message type")
 		}
 	}
 }
@@ -290,10 +275,6 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, meta v16.Meta, uui
 	}
 
 	switch request.Action {
-	case v16.ActionKind(core.Heartbeat):
-		return o.HandleHeartbeatConfirmation(ctx, meta, payload)
-	case v16.ActionKind(core.BootNotification):
-		return o.HandleBootNotificationConfirmation(ctx, request, payload)
 	default:
 		return fmt.Errorf("unknown message type")
 	}
@@ -305,7 +286,7 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, meta v16.Meta, uui
 // TODO: dispatch to service bus on a diff topic - maybe socket-commands
 
 // Handles a Heartbeat request.
-func (o *OcppMachine) HandleHeartbeatRequest(ctx context.Context, payload []byte) error {
+func (o *OcppMachine) handleHeartbeatRequest(ctx context.Context, payload []byte) error {
 	var request core.HeartbeatRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
 		return err
@@ -320,69 +301,30 @@ func (o *OcppMachine) HandleHeartbeatRequest(ctx context.Context, payload []byte
 	return nil
 }
 
-// Handles a Heartbeat confirmation.
-func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, meta v16.Meta, payload []byte) error {
-	var confirmation core.HeartbeatConfirmation
-	if err := json.Unmarshal(payload, &confirmation); err != nil {
-		return err
-	}
-	if err := types.Validate.Struct(confirmation); err != nil {
-		return err
-	}
-
-	slog.Debug("Received Heartbeat Confirmation",
-		slog.Any("payload", confirmation),
-	)
-
-	if err := o.store.UpdateLastHeartbeat(ctx, meta.Serialnumber, confirmation); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Handles a BootNotification request.
-func (o *OcppMachine) HandleBootNotificationRequest(ctx context.Context, payload []byte) error {
+func (o *OcppMachine) handleBootNotificationRequest(ctx context.Context, payload []byte) (core.BootNotificationConfirmation, error) {
 	var request core.BootNotificationRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
-		return err
+		return core.BootNotificationConfirmation{}, err
 	}
 	if err := types.Validate.Struct(request); err != nil {
-		return err
+		return core.BootNotificationConfirmation{}, err
 	}
 
 	slog.Debug("Received BootNotification Request",
 		slog.Any("payload", request),
 	)
 
-	return nil
-}
+	// TODO: check with router if im allowed to handle this request
 
-// Handles a BootNotification confirmation.
-func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, request v16.RequestBody, payload []byte) error {
-	var confirmation core.BootNotificationConfirmation
-	if err := json.Unmarshal(payload, &confirmation); err != nil {
-		return err
+	confirmation := core.BootNotificationConfirmation{
+		Status:      core.RegistrationStatusAccepted,
+		Interval:    30,
+		CurrentTime: types.Now(),
 	}
 	if err := types.Validate.Struct(confirmation); err != nil {
-		return err
+		return core.BootNotificationConfirmation{}, err
 	}
 
-	slog.Debug("Received BootNotification Confirmation",
-		slog.Any("payload", confirmation),
-	)
-
-	var parsedRequest core.BootNotificationRequest
-	if err := json.Unmarshal(request.Payload, &parsedRequest); err != nil {
-		return err
-	}
-	if err := types.Validate.Struct(parsedRequest); err != nil {
-		return err
-	}
-
-	if err := o.store.AddChargepoint(ctx, parsedRequest); err != nil {
-		return err
-	}
-
-	return nil
+	return confirmation, nil
 }
