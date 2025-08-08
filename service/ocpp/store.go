@@ -3,17 +3,18 @@ package ocpp
 import (
 	"context"
 
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
+	v16 "github.com/squishmeist/ocpp-go/service/ocpp/v1.6"
+	"github.com/squishmeist/ocpp-go/service/ocpp/v1.6/core"
 )
 
 type StoreAdapter interface {
-	AddChargepoint(ctx context.Context, payload types.BootNotificationRequest) error
-	UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload types.HeartbeatConfirmation) error
+	AddChargepoint(ctx context.Context, payload core.BootNotificationRequest) error
+	UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload core.HeartbeatConfirmation) error
 }
 
 type CacheAdapter interface {
 	HasProcessed(ctx context.Context, id string) (bool, error)
-	GetRequestFromUuid(ctx context.Context, uuid string) (types.RequestBody, error)
-	AddRequest(ctx context.Context, meta types.Meta, request types.RequestBody) error
-	RemoveRequest(ctx context.Context, meta types.Meta, request types.ConfirmationBody) error
+	GetRequestFromUuid(ctx context.Context, uuid string) (v16.RequestBody, error)
+	AddRequest(ctx context.Context, meta v16.Meta, request v16.RequestBody) error
+	RemoveRequest(ctx context.Context, meta v16.Meta, request v16.ConfirmationBody) error
 }

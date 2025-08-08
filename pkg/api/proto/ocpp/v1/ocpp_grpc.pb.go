@@ -19,217 +19,103 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OCPPMessage_HeartbeatRequest_FullMethodName             = "/ocpp.v1.OCPPMessage/HeartbeatRequest"
-	OCPPMessage_HeartbeatConfirmation_FullMethodName        = "/ocpp.v1.OCPPMessage/HeartbeatConfirmation"
-	OCPPMessage_BootNotificationRequest_FullMethodName      = "/ocpp.v1.OCPPMessage/BootNotificationRequest"
-	OCPPMessage_BootNotificationConfirmation_FullMethodName = "/ocpp.v1.OCPPMessage/BootNotificationConfirmation"
+	AzureMessage_HeartbeatRequest_FullMethodName = "/ocpp.v1.AzureMessage/HeartbeatRequest"
 )
 
-// OCPPMessageClient is the client API for OCPPMessage service.
+// AzureMessageClient is the client API for AzureMessage service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type OCPPMessageClient interface {
+type AzureMessageClient interface {
 	// Sends a heartbeat
 	HeartbeatRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
-	HeartbeatConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
-	BootNotificationRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
-	BootNotificationConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 }
 
-type oCPPMessageClient struct {
+type azureMessageClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewOCPPMessageClient(cc grpc.ClientConnInterface) OCPPMessageClient {
-	return &oCPPMessageClient{cc}
+func NewAzureMessageClient(cc grpc.ClientConnInterface) AzureMessageClient {
+	return &azureMessageClient{cc}
 }
 
-func (c *oCPPMessageClient) HeartbeatRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+func (c *azureMessageClient) HeartbeatRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Response)
-	err := c.cc.Invoke(ctx, OCPPMessage_HeartbeatRequest_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, AzureMessage_HeartbeatRequest_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *oCPPMessageClient) HeartbeatConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Response)
-	err := c.cc.Invoke(ctx, OCPPMessage_HeartbeatConfirmation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *oCPPMessageClient) BootNotificationRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Response)
-	err := c.cc.Invoke(ctx, OCPPMessage_BootNotificationRequest_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *oCPPMessageClient) BootNotificationConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Response)
-	err := c.cc.Invoke(ctx, OCPPMessage_BootNotificationConfirmation_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// OCPPMessageServer is the server API for OCPPMessage service.
-// All implementations must embed UnimplementedOCPPMessageServer
+// AzureMessageServer is the server API for AzureMessage service.
+// All implementations must embed UnimplementedAzureMessageServer
 // for forward compatibility.
-type OCPPMessageServer interface {
+type AzureMessageServer interface {
 	// Sends a heartbeat
 	HeartbeatRequest(context.Context, *Request) (*Response, error)
-	HeartbeatConfirmation(context.Context, *Request) (*Response, error)
-	BootNotificationRequest(context.Context, *Request) (*Response, error)
-	BootNotificationConfirmation(context.Context, *Request) (*Response, error)
-	mustEmbedUnimplementedOCPPMessageServer()
+	mustEmbedUnimplementedAzureMessageServer()
 }
 
-// UnimplementedOCPPMessageServer must be embedded to have
+// UnimplementedAzureMessageServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedOCPPMessageServer struct{}
+type UnimplementedAzureMessageServer struct{}
 
-func (UnimplementedOCPPMessageServer) HeartbeatRequest(context.Context, *Request) (*Response, error) {
+func (UnimplementedAzureMessageServer) HeartbeatRequest(context.Context, *Request) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HeartbeatRequest not implemented")
 }
-func (UnimplementedOCPPMessageServer) HeartbeatConfirmation(context.Context, *Request) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method HeartbeatConfirmation not implemented")
-}
-func (UnimplementedOCPPMessageServer) BootNotificationRequest(context.Context, *Request) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BootNotificationRequest not implemented")
-}
-func (UnimplementedOCPPMessageServer) BootNotificationConfirmation(context.Context, *Request) (*Response, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BootNotificationConfirmation not implemented")
-}
-func (UnimplementedOCPPMessageServer) mustEmbedUnimplementedOCPPMessageServer() {}
-func (UnimplementedOCPPMessageServer) testEmbeddedByValue()                     {}
+func (UnimplementedAzureMessageServer) mustEmbedUnimplementedAzureMessageServer() {}
+func (UnimplementedAzureMessageServer) testEmbeddedByValue()                      {}
 
-// UnsafeOCPPMessageServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to OCPPMessageServer will
+// UnsafeAzureMessageServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AzureMessageServer will
 // result in compilation errors.
-type UnsafeOCPPMessageServer interface {
-	mustEmbedUnimplementedOCPPMessageServer()
+type UnsafeAzureMessageServer interface {
+	mustEmbedUnimplementedAzureMessageServer()
 }
 
-func RegisterOCPPMessageServer(s grpc.ServiceRegistrar, srv OCPPMessageServer) {
-	// If the following call pancis, it indicates UnimplementedOCPPMessageServer was
+func RegisterAzureMessageServer(s grpc.ServiceRegistrar, srv AzureMessageServer) {
+	// If the following call pancis, it indicates UnimplementedAzureMessageServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&OCPPMessage_ServiceDesc, srv)
+	s.RegisterService(&AzureMessage_ServiceDesc, srv)
 }
 
-func _OCPPMessage_HeartbeatRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _AzureMessage_HeartbeatRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(OCPPMessageServer).HeartbeatRequest(ctx, in)
+		return srv.(AzureMessageServer).HeartbeatRequest(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: OCPPMessage_HeartbeatRequest_FullMethodName,
+		FullMethod: AzureMessage_HeartbeatRequest_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OCPPMessageServer).HeartbeatRequest(ctx, req.(*Request))
+		return srv.(AzureMessageServer).HeartbeatRequest(ctx, req.(*Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _OCPPMessage_HeartbeatConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OCPPMessageServer).HeartbeatConfirmation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OCPPMessage_HeartbeatConfirmation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OCPPMessageServer).HeartbeatConfirmation(ctx, req.(*Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _OCPPMessage_BootNotificationRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OCPPMessageServer).BootNotificationRequest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OCPPMessage_BootNotificationRequest_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OCPPMessageServer).BootNotificationRequest(ctx, req.(*Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _OCPPMessage_BootNotificationConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(OCPPMessageServer).BootNotificationConfirmation(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: OCPPMessage_BootNotificationConfirmation_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OCPPMessageServer).BootNotificationConfirmation(ctx, req.(*Request))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// OCPPMessage_ServiceDesc is the grpc.ServiceDesc for OCPPMessage service.
+// AzureMessage_ServiceDesc is the grpc.ServiceDesc for AzureMessage service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var OCPPMessage_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "ocpp.v1.OCPPMessage",
-	HandlerType: (*OCPPMessageServer)(nil),
+var AzureMessage_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ocpp.v1.AzureMessage",
+	HandlerType: (*AzureMessageServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "HeartbeatRequest",
-			Handler:    _OCPPMessage_HeartbeatRequest_Handler,
-		},
-		{
-			MethodName: "HeartbeatConfirmation",
-			Handler:    _OCPPMessage_HeartbeatConfirmation_Handler,
-		},
-		{
-			MethodName: "BootNotificationRequest",
-			Handler:    _OCPPMessage_BootNotificationRequest_Handler,
-		},
-		{
-			MethodName: "BootNotificationConfirmation",
-			Handler:    _OCPPMessage_BootNotificationConfirmation_Handler,
+			Handler:    _AzureMessage_HeartbeatRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

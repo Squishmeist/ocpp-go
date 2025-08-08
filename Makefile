@@ -16,9 +16,10 @@ sqlc:
 	cd ./service/ocpp/db && sqlc generate
 
 proto:
-	protoc --go_out=./pkg --go_opt=paths=source_relative \
+	find api/proto -name "*.proto" -exec protoc \
+		--go_out=./pkg --go_opt=paths=source_relative \
 		--go-grpc_out=./pkg --go-grpc_opt=paths=source_relative \
-		api/proto/ocpp/v1/ocpp.proto
+		{} \;
 
 test:
 	gotestsum

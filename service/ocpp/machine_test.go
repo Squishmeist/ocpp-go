@@ -7,21 +7,22 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
+	v16 "github.com/squishmeist/ocpp-go/service/ocpp/v1.6"
+	"github.com/squishmeist/ocpp-go/service/ocpp/v1.6/core"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestHandleMessage(t *testing.T) {
 	ctx, machine := setupMachineTest(t)
-	meta := types.Meta{
+	meta := v16.Meta{
 		Id:           "test-id",
 		Serialnumber: "test-serial",
 	}
 
-	err := machine.cache.AddRequest(ctx, meta, types.RequestBody{
+	err := machine.cache.AddRequest(ctx, meta, v16.RequestBody{
 		Uuid:   "uuid-456",
-		Action: types.BootNotification,
+		Action: core.BootNotification,
 		Payload: []byte(`{
 			"chargeBoxSerialNumber": "91234567",
 			"chargePointModel": "Zappi",
@@ -37,7 +38,7 @@ func TestHandleMessage(t *testing.T) {
 	assert.NoError(t, err)
 
 	t.Run("InvalidKind", func(t *testing.T) {
-		body := []any{"2.0", "uuid-000", types.Heartbeat, map[string]any{}}
+		body := []any{"2.0", "uuid-000", core.Heartbeat, map[string]any{}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
 		err = machine.HandleMessage(ctx, meta, raw)
@@ -45,7 +46,7 @@ func TestHandleMessage(t *testing.T) {
 	})
 
 	t.Run("NoKind", func(t *testing.T) {
-		body := []any{"uuid-00", types.Heartbeat, map[string]any{}}
+		body := []any{"uuid-00", core.Heartbeat, map[string]any{}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
 		err = machine.HandleMessage(ctx, meta, raw)
@@ -69,7 +70,7 @@ func TestHandleMessage(t *testing.T) {
 	})
 
 	t.Run("InvalidRequest_NoPayload", func(t *testing.T) {
-		body := []any{2.0, "uuid-000", types.Heartbeat}
+		body := []any{2.0, "uuid-000", core.Heartbeat}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
 		err = machine.HandleMessage(ctx, meta, raw)
@@ -77,7 +78,7 @@ func TestHandleMessage(t *testing.T) {
 	})
 
 	t.Run("InvalidRequest_MissingPayload", func(t *testing.T) {
-		body := []any{2.0, "uuid-000", types.BootNotification, map[string]any{
+		body := []any{2.0, "uuid-000", core.BootNotification, map[string]any{
 			"chargeBoxSerialNumber":   "91234567",
 			"chargePointModel":        "Zappi",
 			"chargePointSerialNumber": "91234567",
@@ -89,7 +90,7 @@ func TestHandleMessage(t *testing.T) {
 	})
 
 	t.Run("Request", func(t *testing.T) {
-		body := []any{2.0, "uuid-123", types.BootNotification, map[string]any{
+		body := []any{2.0, "uuid-123", core.BootNotification, map[string]any{
 			"chargeBoxSerialNumber":   "91234567",
 			"chargePointModel":        "Zappi",
 			"chargePointSerialNumber": "91234567",
@@ -209,14 +210,14 @@ func TestParseRawMessage(t *testing.T) {
 	})
 
 	t.Run("Request", func(t *testing.T) {
-		body := []any{2.0, "uuid-123", types.Heartbeat, map[string]any{"custom": "value"}}
+		body := []any{2.0, "uuid-123", core.Heartbeat, map[string]any{"custom": "value"}}
 		raw, err := json.Marshal(body)
 		assert.NoError(t, err)
 		parsed, err := machine.parseRawMessage(raw)
 		assert.NoError(t, err)
-		assert.Equal(t, types.Request, parsed.kind)
+		assert.Equal(t, v16.Request, parsed.kind)
 		assert.NotNil(t, parsed.action)
-		assert.Equal(t, types.Heartbeat, *parsed.action)
+		assert.Equal(t, v16.ActionKind(core.Heartbeat), *parsed.action)
 		assert.Equal(t, "uuid-123", parsed.uuid)
 		assert.NotEmpty(t, parsed.payload)
 	})
@@ -227,7 +228,7 @@ func TestParseRawMessage(t *testing.T) {
 		assert.NoError(t, err)
 		parsed, err := machine.parseRawMessage(raw)
 		assert.NoError(t, err)
-		assert.Equal(t, types.Confirmation, parsed.kind)
+		assert.Equal(t, v16.Confirmation, parsed.kind)
 		assert.Nil(t, parsed.action)
 		assert.Equal(t, "uuid-456", parsed.uuid)
 		assert.NotEmpty(t, parsed.payload)
@@ -243,12 +244,12 @@ func TestHandleRequest(t *testing.T) {
 	})
 
 	t.Run("InvalidPayload", func(t *testing.T) {
-		err := machine.handleRequest(ctx, types.BootNotification, []byte(`{"invalid": "payload"}`))
+		err := machine.handleRequest(ctx, core.BootNotification, []byte(`{"invalid": "payload"}`))
 		assert.Error(t, err)
 	})
 
 	t.Run("ValidPayload", func(t *testing.T) {
-		err := machine.handleRequest(ctx, types.BootNotification, []byte(`{
+		err := machine.handleRequest(ctx, core.BootNotification, []byte(`{
             "chargeBoxSerialNumber": "91234567",
             "chargePointModel": "Zappi",
             "chargePointSerialNumber": "91234567",
@@ -265,17 +266,17 @@ func TestHandleRequest(t *testing.T) {
 
 func TestHandleConfirmation(t *testing.T) {
 	ctx, machine := setupMachineTest(t)
-	meta := types.Meta{
+	meta := v16.Meta{
 		Id:           "test-id",
 		Serialnumber: "test-serial",
 	}
 
-	err := machine.cache.AddRequest(ctx, types.Meta{
+	err := machine.cache.AddRequest(ctx, v16.Meta{
 		Id:           "test-id",
 		Serialnumber: "test-serial",
-	}, types.RequestBody{
+	}, v16.RequestBody{
 		Uuid:   "uuid-123",
-		Action: types.BootNotification,
+		Action: core.BootNotification,
 		Payload: []byte(`{
 			"chargeBoxSerialNumber": "91234567",
 			"chargePointModel": "Zappi",
@@ -321,7 +322,7 @@ func TestHandleHeartbeatRequest(t *testing.T) {
 
 func TestHandleHeartbeatConfirmation(t *testing.T) {
 	ctx, machine := setupMachineTest(t)
-	meta := types.Meta{
+	meta := v16.Meta{
 		Id:           "test-id",
 		Serialnumber: "test-serial",
 	}
@@ -368,9 +369,9 @@ func TestHandleBootNotificationRequest(t *testing.T) {
 
 func TestHandleBootNotificationConfirmation(t *testing.T) {
 	ctx := context.Background()
-	request := types.RequestBody{
+	request := v16.RequestBody{
 		Uuid:   "uuid-000",
-		Action: types.BootNotification,
+		Action: core.BootNotification,
 		Payload: []byte(`{
 			"chargeBoxSerialNumber": "91234567",
 			"chargePointModel": "Zappi",
@@ -406,7 +407,7 @@ func TestHandleBootNotificationConfirmation(t *testing.T) {
 
 type mockCache struct {
 	processed []string
-	requests  map[string]types.RequestBody
+	requests  map[string]v16.RequestBody
 }
 
 func (m *mockCache) HasProcessed(ctx context.Context, id string) (bool, error) {
@@ -417,7 +418,7 @@ func (m *mockCache) HasProcessed(ctx context.Context, id string) (bool, error) {
 	return false, nil
 }
 
-func (m *mockCache) GetRequestFromUuid(ctx context.Context, uuid string) (types.RequestBody, error) {
+func (m *mockCache) GetRequestFromUuid(ctx context.Context, uuid string) (v16.RequestBody, error) {
 
 	for _, request := range m.requests {
 		if request.Uuid == uuid {
@@ -425,19 +426,19 @@ func (m *mockCache) GetRequestFromUuid(ctx context.Context, uuid string) (types.
 		}
 	}
 
-	return types.RequestBody{}, fmt.Errorf("request not found")
+	return v16.RequestBody{}, fmt.Errorf("request not found")
 
 }
 
-func (m *mockCache) AddRequest(ctx context.Context, meta types.Meta, request types.RequestBody) error {
+func (m *mockCache) AddRequest(ctx context.Context, meta v16.Meta, request v16.RequestBody) error {
 	if m.requests == nil {
-		m.requests = make(map[string]types.RequestBody)
+		m.requests = make(map[string]v16.RequestBody)
 	}
 	m.requests[request.Uuid] = request
 	return nil
 }
 
-func (m *mockCache) RemoveRequest(ctx context.Context, meta types.Meta, confirmation types.ConfirmationBody) error {
+func (m *mockCache) RemoveRequest(ctx context.Context, meta v16.Meta, confirmation v16.ConfirmationBody) error {
 	if m.requests == nil {
 		return fmt.Errorf("no requests found")
 	}
@@ -448,21 +449,21 @@ func (m *mockCache) RemoveRequest(ctx context.Context, meta types.Meta, confirma
 type mockStore struct {
 }
 
-func (m *mockStore) AddChargepoint(ctx context.Context, request types.BootNotificationRequest) error {
+func (m *mockStore) AddChargepoint(ctx context.Context, request core.BootNotificationRequest) error {
 	return nil
 }
 
-func (m *mockStore) UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload types.HeartbeatConfirmation) error {
+func (m *mockStore) UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload core.HeartbeatConfirmation) error {
 	return nil
 }
 
 func setupMachineTest(t *testing.T) (context.Context, *OcppMachine) {
 	ctx := context.Background()
-
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
 		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
+	assert.NotNil(t, machine)
 	return ctx, machine
 }

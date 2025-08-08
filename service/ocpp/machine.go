@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
+	v16 "github.com/squishmeist/ocpp-go/service/ocpp/v1.6"
+	"github.com/squishmeist/ocpp-go/service/ocpp/v1.6/core"
+	"github.com/squishmeist/ocpp-go/service/ocpp/v1.6/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -76,7 +77,7 @@ func NewOcppMachine(opts ...OcppMachineOption) *OcppMachine {
 }
 
 // Handles an incoming OCPP message.
-func (o *OcppMachine) HandleMessage(ctx context.Context, meta types.Meta, msg []byte) error {
+func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []byte) error {
 	ctx, span := o.TracerProvider.Tracer("ocpp").Start(ctx, "HandleMessage")
 	defer span.End()
 
@@ -111,12 +112,12 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta types.Meta, msg []
 		span.AddEvent("parsed message")
 
 		switch parsedMsg.kind {
-		case types.Request:
+		case v16.Request:
 			if err := o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload); err != nil {
 				return err
 			}
 
-			if err := o.cache.AddRequest(ctx, meta, types.RequestBody{
+			if err := o.cache.AddRequest(ctx, meta, v16.RequestBody{
 				Uuid:    parsedMsg.uuid,
 				Action:  *parsedMsg.action,
 				Payload: parsedMsg.payload,
@@ -134,12 +135,12 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta types.Meta, msg []
 				attribute.String("uuid", parsedMsg.uuid),
 			))
 			return nil
-		case types.Confirmation:
+		case v16.Confirmation:
 			if err := o.handleConfirmation(ctx, meta, parsedMsg.uuid, parsedMsg.payload); err != nil {
 				return err
 			}
 
-			if err := o.cache.RemoveRequest(ctx, meta, types.ConfirmationBody{
+			if err := o.cache.RemoveRequest(ctx, meta, v16.ConfirmationBody{
 				Uuid:    parsedMsg.uuid,
 				Payload: parsedMsg.payload,
 			}); err != nil {
@@ -163,8 +164,8 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta types.Meta, msg []
 
 // Represents a parsed OCPP message with its kind, action, UUID, and payload.
 type parsedMessage struct {
-	kind    types.MessageKind
-	action  *types.ActionKind
+	kind    v16.MessageKind
+	action  *v16.ActionKind
 	uuid    string
 	payload []byte
 }
@@ -196,7 +197,7 @@ func (o *OcppMachine) parseRawMessage(msg []byte) (parsedMessage, error) {
 		}
 
 		return parsedMessage{
-			kind:    types.Request,
+			kind:    v16.Request,
 			action:  &result.Action,
 			uuid:    uuid,
 			payload: result.Payload,
@@ -209,7 +210,7 @@ func (o *OcppMachine) parseRawMessage(msg []byte) (parsedMessage, error) {
 		}
 
 		return parsedMessage{
-			kind:    types.Confirmation,
+			kind:    v16.Confirmation,
 			action:  nil,
 			uuid:    uuid,
 			payload: result.Payload,
@@ -220,26 +221,26 @@ func (o *OcppMachine) parseRawMessage(msg []byte) (parsedMessage, error) {
 }
 
 // Parses a message body into a RequestBody.
-func (o *OcppMachine) parseRequestBody(uuid string, arr []any) (types.RequestBody, error) {
+func (o *OcppMachine) parseRequestBody(uuid string, arr []any) (v16.RequestBody, error) {
 	if len(arr) < 4 {
-		return types.RequestBody{}, fmt.Errorf("invalid request body: expected at least 4 elements for REQUEST, got %d", len(arr))
+		return v16.RequestBody{}, fmt.Errorf("invalid request body: expected at least 4 elements for REQUEST, got %d", len(arr))
 	}
 
 	actionStr, ok := arr[2].(string)
 	if !ok {
-		return types.RequestBody{}, fmt.Errorf("invalid action, expected action to be a string, got %T", arr[2])
+		return v16.RequestBody{}, fmt.Errorf("invalid action, expected action to be a string, got %T", arr[2])
 	}
-	action := types.ActionKind(strings.ToUpper(actionStr))
+	action := v16.ActionKind(actionStr)
 	if !action.IsValid() {
-		return types.RequestBody{}, fmt.Errorf("invalid action kind: %s", actionStr)
+		return v16.RequestBody{}, fmt.Errorf("invalid action kind: %s", actionStr)
 	}
 
 	payload, err := json.Marshal(arr[3])
 	if err != nil {
-		return types.RequestBody{}, fmt.Errorf("failed to marshal payload: %w", err)
+		return v16.RequestBody{}, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	return types.RequestBody{
+	return v16.RequestBody{
 		Uuid:    uuid,
 		Action:  action,
 		Payload: payload,
@@ -247,33 +248,33 @@ func (o *OcppMachine) parseRequestBody(uuid string, arr []any) (types.RequestBod
 }
 
 // Parses a message body into a ConfirmationBody.
-func (o *OcppMachine) parseConfirmationBody(uuid string, arr []any) (types.ConfirmationBody, error) {
+func (o *OcppMachine) parseConfirmationBody(uuid string, arr []any) (v16.ConfirmationBody, error) {
 	if len(arr) < 3 {
-		return types.ConfirmationBody{}, fmt.Errorf("invalid confirmation body: expected at least 3 elements for CONFIRMATION, got %d", len(arr))
+		return v16.ConfirmationBody{}, fmt.Errorf("invalid confirmation body: expected at least 3 elements for CONFIRMATION, got %d", len(arr))
 	}
 
 	payload, err := json.Marshal(arr[2])
 	if err != nil {
-		return types.ConfirmationBody{}, fmt.Errorf("failed to marshal payload: %w", err)
+		return v16.ConfirmationBody{}, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	return types.ConfirmationBody{
+	return v16.ConfirmationBody{
 		Uuid:    uuid,
 		Payload: payload,
 	}, nil
 }
 
 // Processes a OCPP request message
-func (o *OcppMachine) handleRequest(ctx context.Context, action types.ActionKind, payload []byte) error {
+func (o *OcppMachine) handleRequest(ctx context.Context, action v16.ActionKind, payload []byte) error {
 	select {
 	case <-ctx.Done():
 		// TODO: handle context shutdown
 		return ctx.Err()
 	default:
 		switch action {
-		case types.ActionKind(types.Heartbeat):
+		case v16.ActionKind(core.Heartbeat):
 			return o.HandleHeartbeatRequest(ctx, payload)
-		case types.ActionKind(types.BootNotification):
+		case v16.ActionKind(core.BootNotification):
 			return o.HandleBootNotificationRequest(ctx, payload)
 		default:
 			return fmt.Errorf("unknown message type")
@@ -282,16 +283,16 @@ func (o *OcppMachine) handleRequest(ctx context.Context, action types.ActionKind
 }
 
 // Processes a OCPP confirmation message
-func (o *OcppMachine) handleConfirmation(ctx context.Context, meta types.Meta, uuid string, payload []byte) error {
+func (o *OcppMachine) handleConfirmation(ctx context.Context, meta v16.Meta, uuid string, payload []byte) error {
 	request, err := o.cache.GetRequestFromUuid(ctx, uuid)
 	if err != nil {
 		return fmt.Errorf("failed to find request: %v", err)
 	}
 
 	switch request.Action {
-	case types.ActionKind(types.Heartbeat):
+	case v16.ActionKind(core.Heartbeat):
 		return o.HandleHeartbeatConfirmation(ctx, meta, payload)
-	case types.ActionKind(types.BootNotification):
+	case v16.ActionKind(core.BootNotification):
 		return o.HandleBootNotificationConfirmation(ctx, request, payload)
 	default:
 		return fmt.Errorf("unknown message type")
@@ -305,7 +306,7 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, meta types.Meta, u
 
 // Handles a Heartbeat request.
 func (o *OcppMachine) HandleHeartbeatRequest(ctx context.Context, payload []byte) error {
-	var request types.HeartbeatRequest
+	var request core.HeartbeatRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
 		return err
 	}
@@ -320,8 +321,8 @@ func (o *OcppMachine) HandleHeartbeatRequest(ctx context.Context, payload []byte
 }
 
 // Handles a Heartbeat confirmation.
-func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, meta types.Meta, payload []byte) error {
-	var confirmation types.HeartbeatConfirmation
+func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, meta v16.Meta, payload []byte) error {
+	var confirmation core.HeartbeatConfirmation
 	if err := json.Unmarshal(payload, &confirmation); err != nil {
 		return err
 	}
@@ -342,7 +343,7 @@ func (o *OcppMachine) HandleHeartbeatConfirmation(ctx context.Context, meta type
 
 // Handles a BootNotification request.
 func (o *OcppMachine) HandleBootNotificationRequest(ctx context.Context, payload []byte) error {
-	var request types.BootNotificationRequest
+	var request core.BootNotificationRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
 		return err
 	}
@@ -358,8 +359,8 @@ func (o *OcppMachine) HandleBootNotificationRequest(ctx context.Context, payload
 }
 
 // Handles a BootNotification confirmation.
-func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, request types.RequestBody, payload []byte) error {
-	var confirmation types.BootNotificationConfirmation
+func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, request v16.RequestBody, payload []byte) error {
+	var confirmation core.BootNotificationConfirmation
 	if err := json.Unmarshal(payload, &confirmation); err != nil {
 		return err
 	}
@@ -371,7 +372,7 @@ func (o *OcppMachine) HandleBootNotificationConfirmation(ctx context.Context, re
 		slog.Any("payload", confirmation),
 	)
 
-	var parsedRequest types.BootNotificationRequest
+	var parsedRequest core.BootNotificationRequest
 	if err := json.Unmarshal(request.Payload, &parsedRequest); err != nil {
 		return err
 	}

@@ -1,0 +1,31 @@
+package core
+
+// -------------------- Get Configuration (CS -> CP) --------------------
+// To retrieve the value of configuration settings, the Central System SHALL send a GetConfigurationRequest to the Charge Point.
+// If the list of keys in the request is empty or missing (it is optional), the Charge Point SHALL return a list of all configuration settings in GetConfigurationConfirmation.
+// Otherwise Charge Point SHALL return a list of recognized keys and their corresponding values and read-only state.
+// Unrecognized keys SHALL be placed in the response payload as part of the optional unknown key list element of GetConfigurationConfirmation.
+// The number of configuration keys requested in a single payload MAY be limited by the Charge Point.
+// This maximum can be retrieved by reading the configuration key GetConfigurationMaxKeys.
+const GetConfiguration = "GetConfiguration"
+
+// Contains information about a specific configuration key. It is returned in GetConfigurationConfirmation
+type ConfigurationKey struct {
+	Key      string  `json:"key" validate:"required,max=50"`
+	Readonly bool    `json:"readonly"`
+	Value    *string `json:"value,omitempty" validate:"omitempty,max=500"`
+}
+
+// The field definition of the GetConfiguration request payload sent by the Central System to the Charge Point.
+type GetConfigurationRequest struct {
+	Key []string `json:"key,omitempty" validate:"omitempty,unique,dive,max=50"`
+}
+
+// TODO: validation of cardinalities for the two fields should be handled somewhere (#configurationKey + #unknownKey > 0)
+// TODO: add uniqueness of configurationKey in slice, once PR is merged (https://github.com/go-playground/validator/pull/496)
+// This field definition of the GetConfiguration confirmation payload, sent by the Charge Point to the Central System in response to a GetConfigurationRequest.
+// In case the request was invalid, or couldn't be processed, an error will be sent instead.
+type GetConfigurationConfirmation struct {
+	ConfigurationKey []ConfigurationKey `json:"configurationKey,omitempty" validate:"omitempty,dive"`
+	UnknownKey       []string           `json:"unknownKey,omitempty" validate:"omitempty,dive,max=50"`
+}

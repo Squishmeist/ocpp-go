@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/squishmeist/ocpp-go/internal/core"
+	iCore "github.com/squishmeist/ocpp-go/internal/core"
 	"github.com/squishmeist/ocpp-go/service/ocpp/db/schemas"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
+	"github.com/squishmeist/ocpp-go/service/ocpp/v1.6/core"
+	"github.com/squishmeist/ocpp-go/service/ocpp/v1.6/types"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -25,8 +26,8 @@ func NewDbStore(tp trace.TracerProvider, queries *schemas.Queries) *DbStore {
 	}
 }
 
-func (s *DbStore) AddChargepoint(ctx context.Context, payload types.BootNotificationRequest) error {
-	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.AddChargepoint")
+func (s *DbStore) AddChargepoint(ctx context.Context, payload core.BootNotificationRequest) error {
+	ctx, span := iCore.TraceDB(ctx, s.Tracer, "Store.AddChargepoint")
 	defer span.End()
 
 	_, err := s.queries.InsertChargepoint(ctx, schemas.InsertChargepointParams{
@@ -47,8 +48,8 @@ func (s *DbStore) AddChargepoint(ctx context.Context, payload types.BootNotifica
 	return nil
 }
 
-func (s *DbStore) UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload types.HeartbeatConfirmation) error {
-	ctx, span := core.TraceDB(ctx, s.Tracer, "Store.UpdateLastHeartbeat")
+func (s *DbStore) UpdateLastHeartbeat(ctx context.Context, serialnumber string, payload core.HeartbeatConfirmation) error {
+	ctx, span := iCore.TraceDB(ctx, s.Tracer, "Store.UpdateLastHeartbeat")
 	defer span.End()
 
 	result, err := s.queries.UpdateChargepointLastHeartbeat(ctx, schemas.UpdateChargepointLastHeartbeatParams{

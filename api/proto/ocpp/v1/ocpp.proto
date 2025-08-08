@@ -4,20 +4,15 @@ package ocpp.v1;
 
 option go_package = "github.com/squishmeist/ocpp-go/pkg/api/ocpp/v1;ocpppb";
 
-service OCPPMessage {
-  // Sends a heartbeat
-  rpc HeartbeatRequest (Request) returns (Response) {}
-  rpc HeartbeatConfirmation (Request) returns (Response) {}
-  rpc BootNotificationRequest (Request) returns (Response) {}
-  rpc BootNotificationConfirmation (Request) returns (Response) {}
+message Envelope {
+  Action action = 1;
+  bytes payload = 2;
 }
 
-// The request message for HeartbeatRequest
-message Request {
-  string message = 1;
+enum Action {
+  TRIGGER_MESSAGE = 0;
 }
 
-// The response message for OCPPMessage
-message Response {
+message TriggerMessage {
   string message = 1;
 }

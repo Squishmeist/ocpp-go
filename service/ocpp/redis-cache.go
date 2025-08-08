@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/squishmeist/ocpp-go/internal/core"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
+	v16 "github.com/squishmeist/ocpp-go/service/ocpp/v1.6"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -59,38 +59,38 @@ func (c *RedisCache) addProcessed(ctx context.Context, id string) error {
 	return nil
 }
 
-func (c *RedisCache) GetRequestFromUuid(ctx context.Context, uuid string) (types.RequestBody, error) {
+func (c *RedisCache) GetRequestFromUuid(ctx context.Context, uuid string) (v16.RequestBody, error) {
 	ctx, span := core.TraceCache(ctx, c.Tracer, "Cache.GetRequestFromUuid")
 	defer span.End()
 
 	result, err := c.client.HGetAll(ctx, "request:"+uuid).Result()
 
 	if err != nil {
-		return types.RequestBody{}, err
+		return v16.RequestBody{}, err
 	}
 
 	if len(result) == 0 {
-		return types.RequestBody{}, fmt.Errorf("request not found")
+		return v16.RequestBody{}, fmt.Errorf("request not found")
 	}
 
 	if _, ok := result["uuid"]; !ok {
-		return types.RequestBody{}, fmt.Errorf("uuid not found in request data")
+		return v16.RequestBody{}, fmt.Errorf("uuid not found in request data")
 	}
 	if _, ok := result["action"]; !ok {
-		return types.RequestBody{}, fmt.Errorf("action not found in request data")
+		return v16.RequestBody{}, fmt.Errorf("action not found in request data")
 	}
 	if _, ok := result["payload"]; !ok {
-		return types.RequestBody{}, fmt.Errorf("payload not found in request data")
+		return v16.RequestBody{}, fmt.Errorf("payload not found in request data")
 	}
 
-	return types.RequestBody{
+	return v16.RequestBody{
 		Uuid:    uuid,
-		Action:  types.ActionKind(result["action"]),
+		Action:  v16.ActionKind(result["action"]),
 		Payload: []byte(result["payload"]),
 	}, nil
 }
 
-func (c *RedisCache) AddRequest(ctx context.Context, meta types.Meta, request types.RequestBody) error {
+func (c *RedisCache) AddRequest(ctx context.Context, meta v16.Meta, request v16.RequestBody) error {
 	ctx, span := core.TraceCache(ctx, c.Tracer, "Cache.AddRequest")
 	defer span.End()
 
@@ -114,7 +114,7 @@ func (c *RedisCache) AddRequest(ctx context.Context, meta types.Meta, request ty
 	return nil
 }
 
-func (c *RedisCache) RemoveRequest(ctx context.Context, meta types.Meta, request types.ConfirmationBody) error {
+func (c *RedisCache) RemoveRequest(ctx context.Context, meta v16.Meta, request v16.ConfirmationBody) error {
 	ctx, span := core.TraceCache(ctx, c.Tracer, "Cache.RemoveRequest")
 	defer span.End()
 

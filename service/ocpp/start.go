@@ -9,7 +9,7 @@ import (
 	"github.com/squishmeist/ocpp-go/internal/core"
 	"github.com/squishmeist/ocpp-go/internal/core/utils"
 	"github.com/squishmeist/ocpp-go/service/ocpp/db"
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
+	v16 "github.com/squishmeist/ocpp-go/service/ocpp/v1.6"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -132,7 +132,7 @@ func (o *Ocpp) handler() core.MessageHandler {
 			return err
 		}
 
-		err := o.machine.HandleMessage(ctx, types.Meta{
+		err := o.machine.HandleMessage(ctx, v16.Meta{
 			Id:           msg.MessageID,
 			Serialnumber: serialnumber,
 		}, msg.Body)

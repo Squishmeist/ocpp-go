@@ -119,12 +119,9 @@ const file_api_proto_ocpp_v1_ocpp_proto_rawDesc = "" +
 	"\aRequest\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"$\n" +
 	"\bResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\x91\x02\n" +
-	"\vOCPPMessage\x129\n" +
-	"\x10HeartbeatRequest\x12\x10.ocpp.v1.Request\x1a\x11.ocpp.v1.Response\"\x00\x12>\n" +
-	"\x15HeartbeatConfirmation\x12\x10.ocpp.v1.Request\x1a\x11.ocpp.v1.Response\"\x00\x12@\n" +
-	"\x17BootNotificationRequest\x12\x10.ocpp.v1.Request\x1a\x11.ocpp.v1.Response\"\x00\x12E\n" +
-	"\x1cBootNotificationConfirmation\x12\x10.ocpp.v1.Request\x1a\x11.ocpp.v1.Response\"\x00B7Z5github.com/squishmeist/ocpp-go/pkg/api/ocpp/v1;ocpppbb\x06proto3"
+	"\amessage\x18\x01 \x01(\tR\amessage2I\n" +
+	"\fAzureMessage\x129\n" +
+	"\x10HeartbeatRequest\x12\x10.ocpp.v1.Request\x1a\x11.ocpp.v1.Response\"\x00B7Z5github.com/squishmeist/ocpp-go/pkg/api/ocpp/v1;ocpppbb\x06proto3"
 
 var (
 	file_api_proto_ocpp_v1_ocpp_proto_rawDescOnce sync.Once
@@ -144,16 +141,10 @@ var file_api_proto_ocpp_v1_ocpp_proto_goTypes = []any{
 	(*Response)(nil), // 1: ocpp.v1.Response
 }
 var file_api_proto_ocpp_v1_ocpp_proto_depIdxs = []int32{
-	0, // 0: ocpp.v1.OCPPMessage.HeartbeatRequest:input_type -> ocpp.v1.Request
-	0, // 1: ocpp.v1.OCPPMessage.HeartbeatConfirmation:input_type -> ocpp.v1.Request
-	0, // 2: ocpp.v1.OCPPMessage.BootNotificationRequest:input_type -> ocpp.v1.Request
-	0, // 3: ocpp.v1.OCPPMessage.BootNotificationConfirmation:input_type -> ocpp.v1.Request
-	1, // 4: ocpp.v1.OCPPMessage.HeartbeatRequest:output_type -> ocpp.v1.Response
-	1, // 5: ocpp.v1.OCPPMessage.HeartbeatConfirmation:output_type -> ocpp.v1.Response
-	1, // 6: ocpp.v1.OCPPMessage.BootNotificationRequest:output_type -> ocpp.v1.Response
-	1, // 7: ocpp.v1.OCPPMessage.BootNotificationConfirmation:output_type -> ocpp.v1.Response
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	0, // 0: ocpp.v1.AzureMessage.HeartbeatRequest:input_type -> ocpp.v1.Request
+	1, // 1: ocpp.v1.AzureMessage.HeartbeatRequest:output_type -> ocpp.v1.Response
+	1, // [1:2] is the sub-list for method output_type
+	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

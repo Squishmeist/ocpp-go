@@ -7,7 +7,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/squishmeist/ocpp-go/internal/core"
-	ocpppb "github.com/squishmeist/ocpp-go/pkg/api/proto/ocpp/v1"
+	messagepb "github.com/squishmeist/ocpp-go/pkg/api/proto/message/v1"
 )
 
 type MessageService struct {
@@ -55,7 +55,7 @@ func NewMessageService(opts ...MessageOption) *MessageService {
 	return service
 }
 
-func (s *MessageService) HeartbeatRequest(ctx context.Context, payload *ocpppb.Request) error {
+func (s *MessageService) HeartbeatRequest(ctx context.Context, payload *messagepb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
 			"serialnumber": "123456789",
@@ -64,7 +64,7 @@ func (s *MessageService) HeartbeatRequest(ctx context.Context, payload *ocpppb.R
 	})
 }
 
-func (s *MessageService) HeartbeatConfirmation(ctx context.Context, payload *ocpppb.Request) error {
+func (s *MessageService) HeartbeatConfirmation(ctx context.Context, payload *messagepb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
 			"serialnumber": "123456789",
@@ -73,7 +73,7 @@ func (s *MessageService) HeartbeatConfirmation(ctx context.Context, payload *ocp
 	})
 }
 
-func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *ocpppb.Request) error {
+func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *messagepb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
 			"serialnumber": "123456789",
@@ -92,7 +92,7 @@ func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *o
 	})
 }
 
-func (s *MessageService) BootNotificationConfirmation(ctx context.Context, payload *ocpppb.Request) error {
+func (s *MessageService) BootNotificationConfirmation(ctx context.Context, payload *messagepb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
 			"serialnumber": "123456789",

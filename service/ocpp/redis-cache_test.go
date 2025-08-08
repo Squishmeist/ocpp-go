@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/squishmeist/ocpp-go/service/ocpp/types"
+	v16 "github.com/squishmeist/ocpp-go/service/ocpp/v1.6"
+	"github.com/squishmeist/ocpp-go/service/ocpp/v1.6/core"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -13,12 +14,12 @@ func TestRedisCache(t *testing.T) {
 	ctx, redis := setupRedisTest(t)
 
 	// Add a request
-	err := redis.AddRequest(ctx, types.Meta{
+	err := redis.AddRequest(ctx, v16.Meta{
 		Id:           "test-id",
 		Serialnumber: "test-serialnumber",
-	}, types.RequestBody{
+	}, v16.RequestBody{
 		Uuid:    "test-uuid",
-		Action:  types.Heartbeat,
+		Action:  core.Heartbeat,
 		Payload: []byte("{}"),
 	})
 	assert.NoError(t, err, "expected no error when adding request")
@@ -52,42 +53,42 @@ func TestRedisCache(t *testing.T) {
 	})
 
 	t.Run("AddRequest_Valid", func(t *testing.T) {
-		err := redis.AddRequest(ctx, types.Meta{
+		err := redis.AddRequest(ctx, v16.Meta{
 			Id:           "test-id2",
 			Serialnumber: "test-serialnumber",
-		}, types.RequestBody{
+		}, v16.RequestBody{
 			Uuid:    "test-uuid2",
-			Action:  types.Heartbeat,
+			Action:  core.Heartbeat,
 			Payload: []byte("{}"),
 		})
 		assert.NoError(t, err, "expected no error for valid input")
 	})
 
 	t.Run("RemoveRequest_Valid", func(t *testing.T) {
-		err := redis.AddRequest(ctx, types.Meta{
+		err := redis.AddRequest(ctx, v16.Meta{
 			Id:           "test-id3",
 			Serialnumber: "test-serialnumber",
-		}, types.RequestBody{
+		}, v16.RequestBody{
 			Uuid:    "test-uuid3",
-			Action:  types.Heartbeat,
+			Action:  core.Heartbeat,
 			Payload: []byte("{}"),
 		})
 		assert.NoError(t, err, "expected no error for valid input")
 
-		err = redis.RemoveRequest(ctx, types.Meta{
+		err = redis.RemoveRequest(ctx, v16.Meta{
 			Id:           "test-id3",
 			Serialnumber: "test-serialnumber",
-		}, types.ConfirmationBody{
+		}, v16.ConfirmationBody{
 			Uuid: "test-uuid3",
 		})
 		assert.NoError(t, err, "expected no error for valid input")
 	})
 
 	t.Run("RemoveRequest_Unknown", func(t *testing.T) {
-		err := redis.RemoveRequest(ctx, types.Meta{
+		err := redis.RemoveRequest(ctx, v16.Meta{
 			Id:           "test-unknown",
 			Serialnumber: "test-serialnumber",
-		}, types.ConfirmationBody{
+		}, v16.ConfirmationBody{
 			Uuid: "unknown-uuid",
 		})
 		assert.Error(t, err, "expected error for unknown uuid")
@@ -97,7 +98,7 @@ func TestRedisCache(t *testing.T) {
 		request, err := redis.GetRequestFromUuid(ctx, "test-uuid")
 		assert.NoError(t, err, "expected no error for valid input")
 		assert.Equal(t, "test-uuid", request.Uuid)
-		assert.Equal(t, types.Heartbeat, request.Action)
+		assert.Equal(t, v16.ActionKind(core.Heartbeat), request.Action)
 		assert.Equal(t, []byte("{}"), request.Payload)
 	})
 
