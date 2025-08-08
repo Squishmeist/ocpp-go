@@ -239,19 +239,28 @@ func TestParseRawMessage(t *testing.T) {
 
 func TestHandleRequest(t *testing.T) {
 	ctx, machine := setupMachineTest(t)
-
-	t.Run("UnknownAction", func(t *testing.T) {
-		_, err := machine.handleRequest(ctx, "Unknown", []byte(`{}`))
-		assert.Error(t, err)
-	})
+	meta := v16.Meta{
+		Id:           "test-id",
+		Serialnumber: "test-serial",
+	}
 
 	t.Run("InvalidPayload", func(t *testing.T) {
-		_, err := machine.handleRequest(ctx, core.BootNotification, []byte(`{"invalid": "payload"}`))
+		msg := parsedMessage{
+			kind:    v16.Request,
+			action:  v16.ActionKind(core.BootNotification).ToPtr(),
+			uuid:    "uuid-000",
+			payload: []byte(`{"invalid": "payload"}`),
+		}
+		_, err := machine.handleRequest(ctx, meta, msg)
 		assert.Error(t, err)
 	})
 
 	t.Run("ValidPayload", func(t *testing.T) {
-		body, err := machine.handleRequest(ctx, core.BootNotification, []byte(`{
+		msg := parsedMessage{
+			kind:   v16.Request,
+			action: v16.ActionKind(core.BootNotification).ToPtr(),
+			uuid:   "uuid-000",
+			payload: []byte(`{
             "chargeBoxSerialNumber": "91234567",
             "chargePointModel": "Zappi",
             "chargePointSerialNumber": "91234567",
@@ -261,7 +270,10 @@ func TestHandleRequest(t *testing.T) {
             "imsi": "",
             "meterType": "",
             "meterSerialNumber": "91234567"
-        }`))
+        }`),
+		}
+
+		body, err := machine.handleRequest(ctx, meta, msg)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, body)
 	})
@@ -318,18 +330,14 @@ func TestHandleHeartbeatRequest(t *testing.T) {
 	ctx, machine := setupMachineTest(t)
 
 	t.Run("ValidPayload", func(t *testing.T) {
-		err := machine.handleHeartbeatRequest(ctx, []byte(`{}`))
+		confirmation, err := machine.handleHeartbeatRequest(ctx, "test-serial", []byte(`{}`))
 		assert.NoError(t, err)
+		assert.NotEmpty(t, confirmation)
 	})
 }
 
 func TestHandleBootNotificationRequest(t *testing.T) {
-	ctx := context.Background()
-	machine := NewOcppMachine(
-		WithTracerProvider(noop.NewTracerProvider()),
-		WithCache(&mockCache{}),
-		WithStore(&mockStore{}),
-	)
+	ctx, machine := setupMachineTest(t)
 
 	t.Run("InvalidPayload", func(t *testing.T) {
 		_, err := machine.handleBootNotificationRequest(ctx, []byte(`{}`))

@@ -143,8 +143,14 @@ func (o *Ocpp) handler() core.MessageHandler {
 			span.End()
 			return err
 		}
-
 		slog.Info("Message processed successfully")
+
+		if len(body) == 0 {
+			slog.Info("No response body to send")
+			span.SetStatus(codes.Ok, "Message processed successfully")
+			span.End()
+			return nil
+		}
 
 		if err := o.client.SendMessage(ctx, outbound.Name, &azservicebus.Message{
 			ApplicationProperties: map[string]any{
@@ -152,6 +158,7 @@ func (o *Ocpp) handler() core.MessageHandler {
 			},
 			Body: body,
 		}); err != nil {
+			slog.Error("Failed to send message", "error", err)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			span.End()

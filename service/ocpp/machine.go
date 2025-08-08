@@ -113,15 +113,13 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 
 		switch parsedMsg.kind {
 		case v16.Request:
-			body, err := o.handleRequest(ctx, *parsedMsg.action, parsedMsg.payload)
+			body, err := o.handleRequest(ctx, meta, parsedMsg)
 			if err != nil {
-				return nil, err
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				span.AddEvent("error marshaling confirmation body")
+				return nil, fmt.Errorf("failed to marshal confirmation body: %w", err)
 			}
-			slog.Info("Added request message",
-				"action", *parsedMsg.action,
-				"uuid", parsedMsg.uuid,
-				"payload", parsedMsg.payload,
-			)
 			span.AddEvent("added request message", trace.WithAttributes(
 				attribute.String("action", string(*parsedMsg.action)),
 				attribute.String("uuid", parsedMsg.uuid),
@@ -246,24 +244,39 @@ func (o *OcppMachine) parseConfirmationBody(uuid string, arr []any) (v16.Confirm
 }
 
 // Processes a OCPP request message
-func (o *OcppMachine) handleRequest(ctx context.Context, action v16.ActionKind, payload []byte) ([]byte, error) {
+func (o *OcppMachine) handleRequest(ctx context.Context, meta v16.Meta, msg parsedMessage) ([]byte, error) {
 	select {
 	case <-ctx.Done():
 		// TODO: handle context shutdown
 		return nil, ctx.Err()
 	default:
-		switch action {
+		var confirmation any
+		var err error
+
+		switch *msg.action {
 		case v16.ActionKind(core.Heartbeat):
-			return nil, o.handleHeartbeatRequest(ctx, payload)
+			confirmation, err = o.handleHeartbeatRequest(ctx, meta.Serialnumber, msg.payload)
 		case v16.ActionKind(core.BootNotification):
-			body, err := o.handleBootNotificationRequest(ctx, payload)
-			if err != nil {
-				return nil, err
-			}
-			return json.Marshal(body)
+			confirmation, err = o.handleBootNotificationRequest(ctx, msg.payload)
 		default:
 			return nil, fmt.Errorf("unknown message type")
 		}
+
+		if err != nil {
+			return nil, err
+		}
+		body, err := json.Marshal([]any{
+			3,
+			msg.uuid,
+			confirmation,
+		})
+		slog.Info("Added request message", "body", body)
+
+		if err != nil {
+			return nil, err
+		}
+		return body, nil
+
 	}
 }
 
@@ -281,24 +294,27 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, meta v16.Meta, uui
 }
 
 // OCPP Commands
-// TODO: dispatch this heartbeat to somewhere
-// TODO: create success or failure response
-// TODO: dispatch to service bus on a diff topic - maybe socket-commands
+// TODO: check with router if im allowed to handle this request
 
 // Handles a Heartbeat request.
-func (o *OcppMachine) handleHeartbeatRequest(ctx context.Context, payload []byte) error {
+func (o *OcppMachine) handleHeartbeatRequest(ctx context.Context, serialnumber string, payload []byte) (core.HeartbeatConfirmation, error) {
 	var request core.HeartbeatRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
-		return err
+		return core.HeartbeatConfirmation{}, err
 	}
 	if err := types.Validate.Struct(request); err != nil {
-		return err
+		return core.HeartbeatConfirmation{}, err
 	}
 
-	slog.Debug("Received Heartbeat Request",
-		slog.Any("payload", request),
-	)
-	return nil
+	confirmation := core.HeartbeatConfirmation{
+		CurrentTime: types.Now(),
+	}
+
+	if err := o.store.UpdateLastHeartbeat(ctx, serialnumber, confirmation); err != nil {
+		return core.HeartbeatConfirmation{}, err
+	}
+
+	return confirmation, nil
 }
 
 // Handles a BootNotification request.
@@ -311,20 +327,13 @@ func (o *OcppMachine) handleBootNotificationRequest(ctx context.Context, payload
 		return core.BootNotificationConfirmation{}, err
 	}
 
-	slog.Debug("Received BootNotification Request",
-		slog.Any("payload", request),
-	)
-
-	// TODO: check with router if im allowed to handle this request
-
-	confirmation := core.BootNotificationConfirmation{
-		Status:      core.RegistrationStatusAccepted,
-		Interval:    30,
-		CurrentTime: types.Now(),
-	}
-	if err := types.Validate.Struct(confirmation); err != nil {
+	if err := o.store.AddChargepoint(ctx, request); err != nil {
 		return core.BootNotificationConfirmation{}, err
 	}
 
-	return confirmation, nil
+	return core.BootNotificationConfirmation{
+		Status:      core.RegistrationStatusAccepted,
+		Interval:    30,
+		CurrentTime: types.Now(),
+	}, nil
 }
