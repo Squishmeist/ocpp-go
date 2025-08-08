@@ -23,6 +23,8 @@ func TestRedisCache(t *testing.T) {
 		Payload: []byte("{}"),
 	})
 	assert.NoError(t, err, "expected no error when adding request")
+	err = redis.AddProcessed(ctx, "test-id")
+	assert.NoError(t, err, "expected no error when adding processed id")
 
 	t.Cleanup(func() {
 		keys, err := redis.client.Keys(ctx, "test-id*").Result()

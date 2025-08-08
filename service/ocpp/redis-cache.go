@@ -50,7 +50,7 @@ func (c *RedisCache) HasProcessed(ctx context.Context, id string) (bool, error) 
 	return val == "1", nil
 }
 
-func (c *RedisCache) addProcessed(ctx context.Context, id string) error {
+func (c *RedisCache) AddProcessed(ctx context.Context, id string) error {
 	ctx, span := core.TraceCache(ctx, c.Tracer, "Cache.AddProcessed")
 	defer span.End()
 	if err := c.client.Set(ctx, id, "1", 24*time.Hour).Err(); err != nil {
@@ -107,10 +107,6 @@ func (c *RedisCache) AddRequest(ctx context.Context, meta v16.Meta, request v16.
 		return err
 	}
 
-	if err := c.addProcessed(ctx, meta.Id); err != nil {
-		return fmt.Errorf("error adding message to processed cache: %w", err)
-	}
-
 	return nil
 }
 
@@ -129,9 +125,6 @@ func (c *RedisCache) RemoveRequest(ctx context.Context, meta v16.Meta, request v
 
 	if err := c.client.Del(ctx, "request:"+request.Uuid).Err(); err != nil {
 		return err
-	}
-	if err := c.addProcessed(ctx, meta.Id); err != nil {
-		return fmt.Errorf("error adding message to processed cache: %w", err)
 	}
 
 	return nil

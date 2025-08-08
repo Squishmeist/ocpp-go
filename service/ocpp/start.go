@@ -143,9 +143,17 @@ func (o *Ocpp) handler() core.MessageHandler {
 			span.End()
 			return err
 		}
+
+		if err := o.machine.cache.AddProcessed(ctx, msg.MessageID); err != nil {
+			slog.Error("Failed to add message to processed cache", "error", err)
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			span.End()
+			return err
+		}
 		slog.Info("Message processed successfully")
 
-		if len(body) == 0 {
+		if body == nil {
 			slog.Info("No response body to send")
 			span.SetStatus(codes.Ok, "Message processed successfully")
 			span.End()

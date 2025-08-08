@@ -370,20 +370,24 @@ func (m *mockCache) HasProcessed(ctx context.Context, id string) (bool, error) {
 	if slices.Contains(m.processed, id) {
 		return true, nil
 	}
-
 	return false, nil
 }
 
-func (m *mockCache) GetRequestFromUuid(ctx context.Context, uuid string) (v16.RequestBody, error) {
+func (m *mockCache) AddProcessed(ctx context.Context, id string) error {
+	if m.processed == nil {
+		m.processed = make([]string, 0)
+	}
+	m.processed = append(m.processed, id)
+	return nil
+}
 
+func (m *mockCache) GetRequestFromUuid(ctx context.Context, uuid string) (v16.RequestBody, error) {
 	for _, request := range m.requests {
 		if request.Uuid == uuid {
 			return request, nil
 		}
 	}
-
 	return v16.RequestBody{}, fmt.Errorf("request not found")
-
 }
 
 func (m *mockCache) AddRequest(ctx context.Context, meta v16.Meta, request v16.RequestBody) error {

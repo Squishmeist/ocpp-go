@@ -14,6 +14,7 @@ type StoreAdapter interface {
 
 type CacheAdapter interface {
 	HasProcessed(ctx context.Context, id string) (bool, error)
+	AddProcessed(ctx context.Context, id string) error
 	GetRequestFromUuid(ctx context.Context, uuid string) (v16.RequestBody, error)
 	AddRequest(ctx context.Context, meta v16.Meta, request v16.RequestBody) error
 	RemoveRequest(ctx context.Context, meta v16.Meta, request v16.ConfirmationBody) error

@@ -120,7 +120,7 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 				span.AddEvent("error marshaling confirmation body")
 				return nil, fmt.Errorf("failed to marshal confirmation body: %w", err)
 			}
-			span.AddEvent("added request message", trace.WithAttributes(
+			span.AddEvent("processed request message", trace.WithAttributes(
 				attribute.String("action", string(*parsedMsg.action)),
 				attribute.String("uuid", parsedMsg.uuid),
 			))
@@ -253,6 +253,8 @@ func (o *OcppMachine) handleRequest(ctx context.Context, meta v16.Meta, msg pars
 		var confirmation any
 		var err error
 
+		sendMessage := true // TODO: check with router if allowed to handle this request
+
 		switch *msg.action {
 		case v16.ActionKind(core.Heartbeat):
 			confirmation, err = o.handleHeartbeatRequest(ctx, meta.Serialnumber, msg.payload)
@@ -265,18 +267,36 @@ func (o *OcppMachine) handleRequest(ctx context.Context, meta v16.Meta, msg pars
 		if err != nil {
 			return nil, err
 		}
-		body, err := json.Marshal([]any{
-			3,
-			msg.uuid,
-			confirmation,
-		})
-		slog.Info("Added request message", "body", body)
 
+		// return confirmation message if allowed
+		if sendMessage {
+			body, err := json.Marshal([]any{
+				3,
+				msg.uuid,
+				confirmation,
+			})
+
+			if err != nil {
+				return nil, err
+			}
+			return body, nil
+		}
+
+		// store the request in cache for to match with confirmation later
+		body, err := json.Marshal(confirmation)
 		if err != nil {
 			return nil, err
 		}
-		return body, nil
 
+		if err := o.cache.AddRequest(ctx, meta, v16.RequestBody{
+			Uuid:    msg.uuid,
+			Action:  *msg.action,
+			Payload: body,
+		}); err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 }
 
@@ -292,9 +312,6 @@ func (o *OcppMachine) handleConfirmation(ctx context.Context, meta v16.Meta, uui
 		return fmt.Errorf("unknown message type")
 	}
 }
-
-// OCPP Commands
-// TODO: check with router if im allowed to handle this request
 
 // Handles a Heartbeat request.
 func (o *OcppMachine) handleHeartbeatRequest(ctx context.Context, serialnumber string, payload []byte) (core.HeartbeatConfirmation, error) {
