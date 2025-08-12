@@ -137,7 +137,6 @@ func (o *Ocpp) handler() core.MessageHandler {
 			Serialnumber: serialnumber,
 		}, msg.Body)
 		if err != nil {
-			slog.Error("Failed to handle message", "error", err)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			span.End()
@@ -166,14 +165,13 @@ func (o *Ocpp) handler() core.MessageHandler {
 			},
 			Body: body,
 		}); err != nil {
-			slog.Error("Failed to send message", "error", err)
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			span.End()
 			return err
 		}
 
-		span.SetStatus(codes.Ok, "Message processed successfully")
+		span.SetStatus(codes.Ok, "Message sent successfully")
 		span.End()
 		return nil
 	}

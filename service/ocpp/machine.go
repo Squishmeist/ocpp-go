@@ -111,14 +111,13 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 		}
 		span.AddEvent("parsed message")
 
+		proxyMode := true // TODO: check with router if allowed to handle message
+
 		switch parsedMsg.kind {
 		case v16.Request:
-			body, err := o.handleRequest(ctx, meta, parsedMsg)
+			body, err := o.handleRequest(ctx, proxyMode, meta, parsedMsg)
 			if err != nil {
-				span.RecordError(err)
-				span.SetStatus(codes.Error, err.Error())
-				span.AddEvent("error marshaling confirmation body")
-				return nil, fmt.Errorf("failed to marshal confirmation body: %w", err)
+				return nil, err
 			}
 			span.AddEvent("processed request message", trace.WithAttributes(
 				attribute.String("action", string(*parsedMsg.action)),
@@ -126,13 +125,9 @@ func (o *OcppMachine) HandleMessage(ctx context.Context, meta v16.Meta, msg []by
 			))
 			return body, nil
 		case v16.Confirmation:
-			if err := o.handleConfirmation(ctx, meta, parsedMsg.uuid, parsedMsg.payload); err != nil {
+			if err := o.handleConfirmation(ctx, proxyMode, meta, parsedMsg); err != nil {
 				return nil, err
 			}
-			slog.Info("Paired confirmation message",
-				"uuid", parsedMsg.uuid,
-				"payload", parsedMsg.payload,
-			)
 			span.AddEvent("paired confirmation message", trace.WithAttributes(
 				attribute.String("uuid", parsedMsg.uuid),
 			))
@@ -243,8 +238,8 @@ func (o *OcppMachine) parseConfirmationBody(uuid string, arr []any) (v16.Confirm
 	}, nil
 }
 
-// Processes a OCPP request message
-func (o *OcppMachine) handleRequest(ctx context.Context, meta v16.Meta, msg parsedMessage) ([]byte, error) {
+// Processes a OCPP request message. If in proxy mode it returns a confirmation to send back else it stores the request in cache to match with a confirmation later.
+func (o *OcppMachine) handleRequest(ctx context.Context, proxyMode bool, meta v16.Meta, msg parsedMessage) ([]byte, error) {
 	select {
 	case <-ctx.Done():
 		// TODO: handle context shutdown
@@ -253,23 +248,21 @@ func (o *OcppMachine) handleRequest(ctx context.Context, meta v16.Meta, msg pars
 		var confirmation any
 		var err error
 
-		sendMessage := true // TODO: check with router if allowed to handle this request
-
 		switch *msg.action {
-		case v16.ActionKind(core.Heartbeat):
-			confirmation, err = o.handleHeartbeatRequest(ctx, meta.Serialnumber, msg.payload)
 		case v16.ActionKind(core.BootNotification):
-			confirmation, err = o.handleBootNotificationRequest(ctx, msg.payload)
+			confirmation, err = o.handleBootNotificationRequest(ctx, proxyMode, msg.payload)
+		case v16.ActionKind(core.Heartbeat):
+			confirmation, err = o.handleHeartbeatRequest(ctx, proxyMode, meta.Serialnumber, msg.payload)
 		default:
-			return nil, fmt.Errorf("unknown message type")
+			return nil, fmt.Errorf("unknown request action")
 		}
 
 		if err != nil {
 			return nil, err
 		}
 
-		// return confirmation message if allowed
-		if sendMessage {
+		// returns confirmation message
+		if proxyMode {
 			body, err := json.Marshal([]any{
 				3,
 				msg.uuid,
@@ -282,16 +275,11 @@ func (o *OcppMachine) handleRequest(ctx context.Context, meta v16.Meta, msg pars
 			return body, nil
 		}
 
-		// store the request in cache for to match with confirmation later
-		body, err := json.Marshal(confirmation)
-		if err != nil {
-			return nil, err
-		}
-
+		// stores request in cache
 		if err := o.cache.AddRequest(ctx, meta, v16.RequestBody{
 			Uuid:    msg.uuid,
 			Action:  *msg.action,
-			Payload: body,
+			Payload: msg.payload,
 		}); err != nil {
 			return nil, err
 		}
@@ -300,42 +288,31 @@ func (o *OcppMachine) handleRequest(ctx context.Context, meta v16.Meta, msg pars
 	}
 }
 
-// Processes a OCPP confirmation message
-func (o *OcppMachine) handleConfirmation(ctx context.Context, meta v16.Meta, uuid string, payload []byte) error {
-	request, err := o.cache.GetRequestFromUuid(ctx, uuid)
+// Processes a OCPP confirmation message. The confirmation is matched with a request in the cache.
+func (o *OcppMachine) handleConfirmation(ctx context.Context, proxyMode bool, meta v16.Meta, msg parsedMessage) error {
+	request, err := o.cache.GetRequestFromUuid(ctx, msg.uuid)
 	if err != nil {
-		return fmt.Errorf("failed to find request: %v", err)
+		return err
 	}
 
 	switch request.Action {
+	case v16.ActionKind(core.BootNotification):
+		return o.handleBootNotificationConfirmation(ctx, request, msg.payload)
+	case v16.ActionKind(core.Heartbeat):
+		return o.handleHeartbeatConfirmation(ctx, meta.Serialnumber, msg.payload)
 	default:
-		return fmt.Errorf("unknown message type")
+		return fmt.Errorf("unknown confirmation action")
 	}
 }
 
-// Handles a Heartbeat request.
-func (o *OcppMachine) handleHeartbeatRequest(ctx context.Context, serialnumber string, payload []byte) (core.HeartbeatConfirmation, error) {
-	var request core.HeartbeatRequest
-	if err := json.Unmarshal(payload, &request); err != nil {
-		return core.HeartbeatConfirmation{}, err
-	}
-	if err := types.Validate.Struct(request); err != nil {
-		return core.HeartbeatConfirmation{}, err
-	}
-
-	confirmation := core.HeartbeatConfirmation{
-		CurrentTime: types.Now(),
-	}
-
-	if err := o.store.UpdateLastHeartbeat(ctx, serialnumber, confirmation); err != nil {
-		return core.HeartbeatConfirmation{}, err
-	}
-
-	return confirmation, nil
+// Handles a complete BootNotification. AddChargepoint is called to store the Charge Point in the store.
+func (o *OcppMachine) onBootNotification(ctx context.Context, request core.BootNotificationRequest) error {
+	return o.store.AddChargepoint(ctx, request)
 }
 
-// Handles a BootNotification request.
-func (o *OcppMachine) handleBootNotificationRequest(ctx context.Context, payload []byte) (core.BootNotificationConfirmation, error) {
+// Handles an incoming BootNotification request from a Charge Point.
+// Validates the request, processes it via onBootNotification, and returns a confirmation to send if it is in proxy mode.
+func (o *OcppMachine) handleBootNotificationRequest(ctx context.Context, proxyMode bool, payload []byte) (core.BootNotificationConfirmation, error) {
 	var request core.BootNotificationRequest
 	if err := json.Unmarshal(payload, &request); err != nil {
 		return core.BootNotificationConfirmation{}, err
@@ -344,13 +321,93 @@ func (o *OcppMachine) handleBootNotificationRequest(ctx context.Context, payload
 		return core.BootNotificationConfirmation{}, err
 	}
 
-	if err := o.store.AddChargepoint(ctx, request); err != nil {
-		return core.BootNotificationConfirmation{}, err
+	if proxyMode {
+		if err := o.onBootNotification(ctx, request); err != nil {
+			return core.BootNotificationConfirmation{}, err
+		}
+
+		return core.BootNotificationConfirmation{
+			Status:      core.RegistrationStatusAccepted,
+			Interval:    30,
+			CurrentTime: types.Now(),
+		}, nil
 	}
 
-	return core.BootNotificationConfirmation{
-		Status:      core.RegistrationStatusAccepted,
-		Interval:    30,
-		CurrentTime: types.Now(),
-	}, nil
+	return core.BootNotificationConfirmation{}, nil
+
+}
+
+// Handles an incoming BootNotification confirmation from the Central System.
+// Validates the confirmation, matches it with the request in cache, and processes via onBootNotification.
+func (o *OcppMachine) handleBootNotificationConfirmation(ctx context.Context, request v16.RequestBody, payload []byte) error {
+	var confirmation core.BootNotificationConfirmation
+	if err := json.Unmarshal(payload, &confirmation); err != nil {
+		return err
+	}
+	if err := types.Validate.Struct(confirmation); err != nil {
+		return err
+	}
+
+	slog.Debug("Received BootNotification Confirmation",
+		slog.Any("payload", confirmation),
+	)
+
+	var parsedRequest core.BootNotificationRequest
+	if err := json.Unmarshal(request.Payload, &parsedRequest); err != nil {
+		return err
+	}
+	if err := types.Validate.Struct(parsedRequest); err != nil {
+		return err
+	}
+
+	return o.onBootNotification(ctx, parsedRequest)
+}
+
+// Handles a complete Heartbeat. Updates the last heartbeat time in the store.
+func (o *OcppMachine) onHeartbeatRequest(ctx context.Context, serialnumber string, confirmation core.HeartbeatConfirmation) error {
+	return o.store.UpdateLastHeartbeat(ctx, serialnumber, confirmation)
+}
+
+// Handles an incoming Heartbeat request from a Charge Point.
+// Validates the request, processes it via onHeartbeatRequest, and returns a confirmation to send if it is in proxy mode.
+func (o *OcppMachine) handleHeartbeatRequest(ctx context.Context, proxyMode bool, serialnumber string, payload []byte) (core.HeartbeatConfirmation, error) {
+	var request core.HeartbeatRequest
+	if err := json.Unmarshal(payload, &request); err != nil {
+		return core.HeartbeatConfirmation{}, err
+	}
+	if err := types.Validate.Struct(request); err != nil {
+		return core.HeartbeatConfirmation{}, err
+	}
+
+	if proxyMode {
+		confirmation := core.HeartbeatConfirmation{
+			CurrentTime: types.Now(),
+		}
+
+		if err := o.onHeartbeatRequest(ctx, serialnumber, confirmation); err != nil {
+			return core.HeartbeatConfirmation{}, err
+		}
+
+		return confirmation, nil
+	}
+
+	return core.HeartbeatConfirmation{}, nil
+}
+
+// Handles an incoming Heartbeat confirmation from the Central System.
+// Validates the confirmation, matches it with the request in cache, and processes via onHeartbeatRequest.
+func (o *OcppMachine) handleHeartbeatConfirmation(ctx context.Context, serialnumber string, payload []byte) error {
+	var confirmation core.HeartbeatConfirmation
+	if err := json.Unmarshal(payload, &confirmation); err != nil {
+		return err
+	}
+	if err := types.Validate.Struct(confirmation); err != nil {
+		return err
+	}
+
+	slog.Debug("Received Heartbeat Confirmation",
+		slog.Any("payload", confirmation),
+	)
+
+	return o.onHeartbeatRequest(ctx, serialnumber, confirmation)
 }

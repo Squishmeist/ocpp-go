@@ -14,11 +14,7 @@ import (
 )
 
 func TestHandleMessage(t *testing.T) {
-	ctx, machine := setupMachineTest(t)
-	meta := v16.Meta{
-		Id:           "test-id",
-		Serialnumber: "test-serial",
-	}
+	ctx, meta, machine := setupMachineTest(t)
 
 	err := machine.cache.AddRequest(ctx, meta, v16.RequestBody{
 		Uuid:   "uuid-456",
@@ -155,7 +151,7 @@ func TestHandleMessage(t *testing.T) {
 }
 
 func TestParseRawMessage(t *testing.T) {
-	_, machine := setupMachineTest(t)
+	_, _, machine := setupMachineTest(t)
 
 	t.Run("NotJSON", func(t *testing.T) {
 		raw := []byte(`not a json array`)
@@ -238,11 +234,7 @@ func TestParseRawMessage(t *testing.T) {
 }
 
 func TestHandleRequest(t *testing.T) {
-	ctx, machine := setupMachineTest(t)
-	meta := v16.Meta{
-		Id:           "test-id",
-		Serialnumber: "test-serial",
-	}
+	ctx, meta, machine := setupMachineTest(t)
 
 	t.Run("InvalidPayload", func(t *testing.T) {
 		msg := parsedMessage{
@@ -251,7 +243,7 @@ func TestHandleRequest(t *testing.T) {
 			uuid:    "uuid-000",
 			payload: []byte(`{"invalid": "payload"}`),
 		}
-		_, err := machine.handleRequest(ctx, meta, msg)
+		_, err := machine.handleRequest(ctx, true, meta, msg)
 		assert.Error(t, err)
 	})
 
@@ -273,7 +265,7 @@ func TestHandleRequest(t *testing.T) {
         }`),
 		}
 
-		body, err := machine.handleRequest(ctx, meta, msg)
+		body, err := machine.handleRequest(ctx, true, meta, msg)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, body)
 	})
@@ -327,25 +319,25 @@ func TestHandleRequest(t *testing.T) {
 // }
 
 func TestHandleHeartbeatRequest(t *testing.T) {
-	ctx, machine := setupMachineTest(t)
+	ctx, meta, machine := setupMachineTest(t)
 
 	t.Run("ValidPayload", func(t *testing.T) {
-		confirmation, err := machine.handleHeartbeatRequest(ctx, "test-serial", []byte(`{}`))
+		confirmation, err := machine.handleHeartbeatRequest(ctx, false, meta.Serialnumber, []byte(`{}`))
 		assert.NoError(t, err)
 		assert.NotEmpty(t, confirmation)
 	})
 }
 
 func TestHandleBootNotificationRequest(t *testing.T) {
-	ctx, machine := setupMachineTest(t)
+	ctx, _, machine := setupMachineTest(t)
 
 	t.Run("InvalidPayload", func(t *testing.T) {
-		_, err := machine.handleBootNotificationRequest(ctx, []byte(`{}`))
+		_, err := machine.handleBootNotificationRequest(ctx, true, []byte(`{}`))
 		assert.Error(t, err)
 	})
 
 	t.Run("ValidPayload", func(t *testing.T) {
-		body, err := machine.handleBootNotificationRequest(ctx, []byte(`{
+		body, err := machine.handleBootNotificationRequest(ctx, true, []byte(`{
 			"chargeBoxSerialNumber": "91234567",
 			"chargePointModel": "Zappi",
 			"chargePointSerialNumber": "91234567",
@@ -417,13 +409,17 @@ func (m *mockStore) UpdateLastHeartbeat(ctx context.Context, serialnumber string
 	return nil
 }
 
-func setupMachineTest(t *testing.T) (context.Context, *OcppMachine) {
+func setupMachineTest(t *testing.T) (context.Context, v16.Meta, *OcppMachine) {
 	ctx := context.Background()
+	meta := v16.Meta{
+		Id:           "test-id",
+		Serialnumber: "test-serial",
+	}
 	machine := NewOcppMachine(
 		WithTracerProvider(noop.NewTracerProvider()),
 		WithCache(&mockCache{}),
 		WithStore(&mockStore{}),
 	)
 	assert.NotNil(t, machine)
-	return ctx, machine
+	return ctx, meta, machine
 }
