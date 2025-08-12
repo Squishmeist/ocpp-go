@@ -1,11 +1,11 @@
 AZURE_SERVICE_BUS:
   CONNECTION_STRING: "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
   TOPIC_INBOUND:
-    NAME: "topic.inbound"
-    SUBSCRIPTION: "subscription.inbound"
+    NAME: "socket-events"
+    SUBSCRIPTION: "socket-events-sub"
   TOPIC_OUTBOUND:
-    NAME: "topic.outbound"
-    SUBSCRIPTION: "subscription.outbound"
+    NAME: "socket-commands"
+    SUBSCRIPTION: "socket-commands-sub"
 HTTP_SERVER:
   PORT: ":8082"
   HOST: "localhost"

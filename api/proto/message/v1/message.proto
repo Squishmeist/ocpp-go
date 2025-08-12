@@ -5,14 +5,15 @@ package message.v1;
 option go_package = "github.com/squishmeist/ocpp-go/pkg/api/message/v1;messagepb";
 
 service OCPPMessage {
-  // Sends a heartbeat
-  rpc HeartbeatRequest (Request) returns (Response) {}
-  rpc HeartbeatConfirmation (Request) returns (Response) {}
   rpc BootNotificationRequest (Request) returns (Response) {}
   rpc BootNotificationConfirmation (Request) returns (Response) {}
+  rpc HeartbeatRequest (Request) returns (Response) {}
+  rpc HeartbeatConfirmation (Request) returns (Response) {}
+  rpc StatusNotificationRequest (Request) returns (Response) {}
+  rpc StatusNotificationConfirmation (Request) returns (Response) {}
 }
 
-// The request message for HeartbeatRequest
+// The request message for OCPPMessage
 message Request {
   string message = 1;
 }

@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// The request message for HeartbeatRequest
+// The request message for OCPPMessage
 type Request struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
@@ -120,12 +120,14 @@ const file_api_proto_message_v1_message_proto_rawDesc = "" +
 	"\aRequest\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"$\n" +
 	"\bResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\xa9\x02\n" +
-	"\vOCPPMessage\x12?\n" +
-	"\x10HeartbeatRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12D\n" +
-	"\x15HeartbeatConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12F\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\xc2\x03\n" +
+	"\vOCPPMessage\x12F\n" +
 	"\x17BootNotificationRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12K\n" +
-	"\x1cBootNotificationConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00B=Z;github.com/squishmeist/ocpp-go/pkg/api/message/v1;messagepbb\x06proto3"
+	"\x1cBootNotificationConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12?\n" +
+	"\x10HeartbeatRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12D\n" +
+	"\x15HeartbeatConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12H\n" +
+	"\x19StatusNotificationRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12M\n" +
+	"\x1eStatusNotificationConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00B=Z;github.com/squishmeist/ocpp-go/pkg/api/message/v1;messagepbb\x06proto3"
 
 var (
 	file_api_proto_message_v1_message_proto_rawDescOnce sync.Once
@@ -145,16 +147,20 @@ var file_api_proto_message_v1_message_proto_goTypes = []any{
 	(*Response)(nil), // 1: message.v1.Response
 }
 var file_api_proto_message_v1_message_proto_depIdxs = []int32{
-	0, // 0: message.v1.OCPPMessage.HeartbeatRequest:input_type -> message.v1.Request
-	0, // 1: message.v1.OCPPMessage.HeartbeatConfirmation:input_type -> message.v1.Request
-	0, // 2: message.v1.OCPPMessage.BootNotificationRequest:input_type -> message.v1.Request
-	0, // 3: message.v1.OCPPMessage.BootNotificationConfirmation:input_type -> message.v1.Request
-	1, // 4: message.v1.OCPPMessage.HeartbeatRequest:output_type -> message.v1.Response
-	1, // 5: message.v1.OCPPMessage.HeartbeatConfirmation:output_type -> message.v1.Response
+	0, // 0: message.v1.OCPPMessage.BootNotificationRequest:input_type -> message.v1.Request
+	0, // 1: message.v1.OCPPMessage.BootNotificationConfirmation:input_type -> message.v1.Request
+	0, // 2: message.v1.OCPPMessage.HeartbeatRequest:input_type -> message.v1.Request
+	0, // 3: message.v1.OCPPMessage.HeartbeatConfirmation:input_type -> message.v1.Request
+	0, // 4: message.v1.OCPPMessage.StatusNotificationRequest:input_type -> message.v1.Request
+	0, // 5: message.v1.OCPPMessage.StatusNotificationConfirmation:input_type -> message.v1.Request
 	1, // 6: message.v1.OCPPMessage.BootNotificationRequest:output_type -> message.v1.Response
 	1, // 7: message.v1.OCPPMessage.BootNotificationConfirmation:output_type -> message.v1.Response
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	1, // 8: message.v1.OCPPMessage.HeartbeatRequest:output_type -> message.v1.Response
+	1, // 9: message.v1.OCPPMessage.HeartbeatConfirmation:output_type -> message.v1.Response
+	1, // 10: message.v1.OCPPMessage.StatusNotificationRequest:output_type -> message.v1.Response
+	1, // 11: message.v1.OCPPMessage.StatusNotificationConfirmation:output_type -> message.v1.Response
+	6, // [6:12] is the sub-list for method output_type
+	0, // [0:6] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

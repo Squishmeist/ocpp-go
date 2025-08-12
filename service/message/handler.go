@@ -55,24 +55,6 @@ func NewMessageService(opts ...MessageOption) *MessageService {
 	return service
 }
 
-func (s *MessageService) HeartbeatRequest(ctx context.Context, payload *messagepb.Request) error {
-	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
-		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
-		},
-		Body: []byte(`[2, "uuid-1", "Heartbeat", {}]`),
-	})
-}
-
-func (s *MessageService) HeartbeatConfirmation(ctx context.Context, payload *messagepb.Request) error {
-	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
-		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
-		},
-		Body: []byte(`[3, "uuid-1", { "currentTime": "2025-07-22T11:25:25.230Z" }]`),
-	})
-}
-
 func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *messagepb.Request) error {
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
@@ -102,5 +84,46 @@ func (s *MessageService) BootNotificationConfirmation(ctx context.Context, paylo
             "interval": 30,
             "status": "Accepted"
         }]`),
+	})
+}
+
+func (s *MessageService) HeartbeatRequest(ctx context.Context, payload *messagepb.Request) error {
+	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
+		Body: []byte(`[2, "uuid-1", "Heartbeat", {}]`),
+	})
+}
+
+func (s *MessageService) HeartbeatConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
+		Body: []byte(`[3, "uuid-1", { "currentTime": "2025-07-22T11:25:25.230Z" }]`),
+	})
+}
+
+func (s *MessageService) StatusNotificationRequest(ctx context.Context, payload *messagepb.Request) error {
+	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
+		Body: []byte(`[2,"uuid-3", "BootNotification",{
+			"connectorId": 1,
+			"errorCode": "NoError",
+			"status": "Preparing",
+			"timestamp": "2022-06-12T09:13:00.515Z"
+        }]`),
+	})
+}
+
+func (s *MessageService) StatusNotificationConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
+		ApplicationProperties: map[string]any{
+			"serialnumber": "123456789",
+		},
+		Body: []byte(`[3,"uuid-3",{}]`),
 	})
 }
