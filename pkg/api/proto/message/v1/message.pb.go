@@ -120,14 +120,20 @@ const file_api_proto_message_v1_message_proto_rawDesc = "" +
 	"\aRequest\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"$\n" +
 	"\bResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2\xc2\x03\n" +
+	"\amessage\x18\x01 \x01(\tR\amessage2\xf5\x06\n" +
 	"\vOCPPMessage\x12F\n" +
 	"\x17BootNotificationRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12K\n" +
 	"\x1cBootNotificationConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12?\n" +
 	"\x10HeartbeatRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12D\n" +
-	"\x15HeartbeatConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12H\n" +
+	"\x15HeartbeatConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12F\n" +
+	"\x17StartTransactionRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12K\n" +
+	"\x1cStartTransactionConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12A\n" +
+	"\x12MeterValuesRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12F\n" +
+	"\x17MeterValuesConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12H\n" +
 	"\x19StatusNotificationRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12M\n" +
-	"\x1eStatusNotificationConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00B=Z;github.com/squishmeist/ocpp-go/pkg/api/message/v1;messagepbb\x06proto3"
+	"\x1eStatusNotificationConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12E\n" +
+	"\x16StopTransactionRequest\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00\x12J\n" +
+	"\x1bStopTransactionConfirmation\x12\x13.message.v1.Request\x1a\x14.message.v1.Response\"\x00B=Z;github.com/squishmeist/ocpp-go/pkg/api/message/v1;messagepbb\x06proto3"
 
 var (
 	file_api_proto_message_v1_message_proto_rawDescOnce sync.Once
@@ -147,23 +153,35 @@ var file_api_proto_message_v1_message_proto_goTypes = []any{
 	(*Response)(nil), // 1: message.v1.Response
 }
 var file_api_proto_message_v1_message_proto_depIdxs = []int32{
-	0, // 0: message.v1.OCPPMessage.BootNotificationRequest:input_type -> message.v1.Request
-	0, // 1: message.v1.OCPPMessage.BootNotificationConfirmation:input_type -> message.v1.Request
-	0, // 2: message.v1.OCPPMessage.HeartbeatRequest:input_type -> message.v1.Request
-	0, // 3: message.v1.OCPPMessage.HeartbeatConfirmation:input_type -> message.v1.Request
-	0, // 4: message.v1.OCPPMessage.StatusNotificationRequest:input_type -> message.v1.Request
-	0, // 5: message.v1.OCPPMessage.StatusNotificationConfirmation:input_type -> message.v1.Request
-	1, // 6: message.v1.OCPPMessage.BootNotificationRequest:output_type -> message.v1.Response
-	1, // 7: message.v1.OCPPMessage.BootNotificationConfirmation:output_type -> message.v1.Response
-	1, // 8: message.v1.OCPPMessage.HeartbeatRequest:output_type -> message.v1.Response
-	1, // 9: message.v1.OCPPMessage.HeartbeatConfirmation:output_type -> message.v1.Response
-	1, // 10: message.v1.OCPPMessage.StatusNotificationRequest:output_type -> message.v1.Response
-	1, // 11: message.v1.OCPPMessage.StatusNotificationConfirmation:output_type -> message.v1.Response
-	6, // [6:12] is the sub-list for method output_type
-	0, // [0:6] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: message.v1.OCPPMessage.BootNotificationRequest:input_type -> message.v1.Request
+	0,  // 1: message.v1.OCPPMessage.BootNotificationConfirmation:input_type -> message.v1.Request
+	0,  // 2: message.v1.OCPPMessage.HeartbeatRequest:input_type -> message.v1.Request
+	0,  // 3: message.v1.OCPPMessage.HeartbeatConfirmation:input_type -> message.v1.Request
+	0,  // 4: message.v1.OCPPMessage.StartTransactionRequest:input_type -> message.v1.Request
+	0,  // 5: message.v1.OCPPMessage.StartTransactionConfirmation:input_type -> message.v1.Request
+	0,  // 6: message.v1.OCPPMessage.MeterValuesRequest:input_type -> message.v1.Request
+	0,  // 7: message.v1.OCPPMessage.MeterValuesConfirmation:input_type -> message.v1.Request
+	0,  // 8: message.v1.OCPPMessage.StatusNotificationRequest:input_type -> message.v1.Request
+	0,  // 9: message.v1.OCPPMessage.StatusNotificationConfirmation:input_type -> message.v1.Request
+	0,  // 10: message.v1.OCPPMessage.StopTransactionRequest:input_type -> message.v1.Request
+	0,  // 11: message.v1.OCPPMessage.StopTransactionConfirmation:input_type -> message.v1.Request
+	1,  // 12: message.v1.OCPPMessage.BootNotificationRequest:output_type -> message.v1.Response
+	1,  // 13: message.v1.OCPPMessage.BootNotificationConfirmation:output_type -> message.v1.Response
+	1,  // 14: message.v1.OCPPMessage.HeartbeatRequest:output_type -> message.v1.Response
+	1,  // 15: message.v1.OCPPMessage.HeartbeatConfirmation:output_type -> message.v1.Response
+	1,  // 16: message.v1.OCPPMessage.StartTransactionRequest:output_type -> message.v1.Response
+	1,  // 17: message.v1.OCPPMessage.StartTransactionConfirmation:output_type -> message.v1.Response
+	1,  // 18: message.v1.OCPPMessage.MeterValuesRequest:output_type -> message.v1.Response
+	1,  // 19: message.v1.OCPPMessage.MeterValuesConfirmation:output_type -> message.v1.Response
+	1,  // 20: message.v1.OCPPMessage.StatusNotificationRequest:output_type -> message.v1.Response
+	1,  // 21: message.v1.OCPPMessage.StatusNotificationConfirmation:output_type -> message.v1.Response
+	1,  // 22: message.v1.OCPPMessage.StopTransactionRequest:output_type -> message.v1.Response
+	1,  // 23: message.v1.OCPPMessage.StopTransactionConfirmation:output_type -> message.v1.Response
+	12, // [12:24] is the sub-list for method output_type
+	0,  // [0:12] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_api_proto_message_v1_message_proto_init() }

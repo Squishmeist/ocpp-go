@@ -11,8 +11,14 @@ type MessageServiceInterface interface {
 	BootNotificationConfirmation(context.Context, *messagepb.Request) error
 	HeartbeatRequest(context.Context, *messagepb.Request) error
 	HeartbeatConfirmation(context.Context, *messagepb.Request) error
+	MeterValuesRequest(context.Context, *messagepb.Request) error
+	MeterValuesConfirmation(context.Context, *messagepb.Request) error
+	StartTransactionRequest(context.Context, *messagepb.Request) error
+	StartTransactionConfirmation(context.Context, *messagepb.Request) error
 	StatusNotificationRequest(context.Context, *messagepb.Request) error
 	StatusNotificationConfirmation(context.Context, *messagepb.Request) error
+	StopTransactionRequest(context.Context, *messagepb.Request) error
+	StopTransactionConfirmation(context.Context, *messagepb.Request) error
 }
 
 type MessageGrpcTransport struct {
@@ -50,6 +56,78 @@ func (h *MessageGrpcTransport) BootNotificationConfirmation(ctx context.Context,
 	}, nil
 }
 
+func (h *MessageGrpcTransport) HeartbeatRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.HeartbeatRequest(ctx, req); err != nil {
+		return &messagepb.Response{
+			Message: "Failed to send heartbeat request",
+		}, err
+	}
+
+	return &messagepb.Response{
+		Message: "Heartbeat request sent",
+	}, nil
+}
+
+func (h *MessageGrpcTransport) HeartbeatConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.HeartbeatConfirmation(ctx, req); err != nil {
+		return &messagepb.Response{
+			Message: "Failed to send heartbeat confirmation",
+		}, err
+	}
+
+	return &messagepb.Response{
+		Message: "Heartbeat confirmation sent",
+	}, nil
+}
+
+func (h *MessageGrpcTransport) MeterValuesRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.MeterValuesRequest(ctx, req); err != nil {
+		return &messagepb.Response{
+			Message: "Failed to send meter values request",
+		}, err
+	}
+
+	return &messagepb.Response{
+		Message: "Meter values request sent",
+	}, nil
+}
+
+func (h *MessageGrpcTransport) MeterValuesConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.MeterValuesConfirmation(ctx, req); err != nil {
+		return &messagepb.Response{
+			Message: "Failed to send meter values confirmation",
+		}, err
+	}
+
+	return &messagepb.Response{
+		Message: "Meter values confirmation sent",
+	}, nil
+}
+
+func (h *MessageGrpcTransport) StartTransactionRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.StartTransactionRequest(ctx, req); err != nil {
+		return &messagepb.Response{
+			Message: "Failed to send start transaction request",
+		}, err
+	}
+
+	return &messagepb.Response{
+		Message: "Start transaction request sent",
+	}, nil
+}
+
+func (h *MessageGrpcTransport) StartTransactionConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.StartTransactionConfirmation(ctx, req); err != nil {
+		return &messagepb.Response{
+			Message: "Failed to send start transaction confirmation",
+		}, err
+	}
+
+	return &messagepb.Response{
+		Message: "Start transaction confirmation sent",
+	}, nil
+}
+
 func (h *MessageGrpcTransport) StatusNotificationRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
 	if err := h.Service.StatusNotificationRequest(ctx, req); err != nil {
 		return &messagepb.Response{
@@ -74,26 +152,26 @@ func (h *MessageGrpcTransport) StatusNotificationConfirmation(ctx context.Contex
 	}, nil
 }
 
-func (h *MessageGrpcTransport) HeartbeatRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
-	if err := h.Service.HeartbeatRequest(ctx, req); err != nil {
+func (h *MessageGrpcTransport) StopTransactionRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.StopTransactionRequest(ctx, req); err != nil {
 		return &messagepb.Response{
-			Message: "Failed to send heartbeat request",
+			Message: "Failed to send stop transaction request",
 		}, err
 	}
 
 	return &messagepb.Response{
-		Message: "Heartbeat request sent",
+		Message: "Stop transaction request sent",
 	}, nil
 }
 
-func (h *MessageGrpcTransport) HeartbeatConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
-	if err := h.Service.HeartbeatConfirmation(ctx, req); err != nil {
+func (h *MessageGrpcTransport) StopTransactionConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	if err := h.Service.StopTransactionConfirmation(ctx, req); err != nil {
 		return &messagepb.Response{
-			Message: "Failed to send heartbeat confirmation",
+			Message: "Failed to send stop transaction confirmation",
 		}, err
 	}
 
 	return &messagepb.Response{
-		Message: "Heartbeat confirmation sent",
+		Message: "Stop transaction confirmation sent",
 	}, nil
 }

@@ -23,8 +23,14 @@ const (
 	OCPPMessage_BootNotificationConfirmation_FullMethodName   = "/message.v1.OCPPMessage/BootNotificationConfirmation"
 	OCPPMessage_HeartbeatRequest_FullMethodName               = "/message.v1.OCPPMessage/HeartbeatRequest"
 	OCPPMessage_HeartbeatConfirmation_FullMethodName          = "/message.v1.OCPPMessage/HeartbeatConfirmation"
+	OCPPMessage_StartTransactionRequest_FullMethodName        = "/message.v1.OCPPMessage/StartTransactionRequest"
+	OCPPMessage_StartTransactionConfirmation_FullMethodName   = "/message.v1.OCPPMessage/StartTransactionConfirmation"
+	OCPPMessage_MeterValuesRequest_FullMethodName             = "/message.v1.OCPPMessage/MeterValuesRequest"
+	OCPPMessage_MeterValuesConfirmation_FullMethodName        = "/message.v1.OCPPMessage/MeterValuesConfirmation"
 	OCPPMessage_StatusNotificationRequest_FullMethodName      = "/message.v1.OCPPMessage/StatusNotificationRequest"
 	OCPPMessage_StatusNotificationConfirmation_FullMethodName = "/message.v1.OCPPMessage/StatusNotificationConfirmation"
+	OCPPMessage_StopTransactionRequest_FullMethodName         = "/message.v1.OCPPMessage/StopTransactionRequest"
+	OCPPMessage_StopTransactionConfirmation_FullMethodName    = "/message.v1.OCPPMessage/StopTransactionConfirmation"
 )
 
 // OCPPMessageClient is the client API for OCPPMessage service.
@@ -35,8 +41,14 @@ type OCPPMessageClient interface {
 	BootNotificationConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 	HeartbeatRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 	HeartbeatConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	StartTransactionRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	StartTransactionConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	MeterValuesRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	MeterValuesConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 	StatusNotificationRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 	StatusNotificationConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	StopTransactionRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	StopTransactionConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 }
 
 type oCPPMessageClient struct {
@@ -87,6 +99,46 @@ func (c *oCPPMessageClient) HeartbeatConfirmation(ctx context.Context, in *Reque
 	return out, nil
 }
 
+func (c *oCPPMessageClient) StartTransactionRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, OCPPMessage_StartTransactionRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *oCPPMessageClient) StartTransactionConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, OCPPMessage_StartTransactionConfirmation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *oCPPMessageClient) MeterValuesRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, OCPPMessage_MeterValuesRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *oCPPMessageClient) MeterValuesConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, OCPPMessage_MeterValuesConfirmation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *oCPPMessageClient) StatusNotificationRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Response)
@@ -107,6 +159,26 @@ func (c *oCPPMessageClient) StatusNotificationConfirmation(ctx context.Context, 
 	return out, nil
 }
 
+func (c *oCPPMessageClient) StopTransactionRequest(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, OCPPMessage_StopTransactionRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *oCPPMessageClient) StopTransactionConfirmation(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Response)
+	err := c.cc.Invoke(ctx, OCPPMessage_StopTransactionConfirmation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OCPPMessageServer is the server API for OCPPMessage service.
 // All implementations must embed UnimplementedOCPPMessageServer
 // for forward compatibility.
@@ -115,8 +187,14 @@ type OCPPMessageServer interface {
 	BootNotificationConfirmation(context.Context, *Request) (*Response, error)
 	HeartbeatRequest(context.Context, *Request) (*Response, error)
 	HeartbeatConfirmation(context.Context, *Request) (*Response, error)
+	StartTransactionRequest(context.Context, *Request) (*Response, error)
+	StartTransactionConfirmation(context.Context, *Request) (*Response, error)
+	MeterValuesRequest(context.Context, *Request) (*Response, error)
+	MeterValuesConfirmation(context.Context, *Request) (*Response, error)
 	StatusNotificationRequest(context.Context, *Request) (*Response, error)
 	StatusNotificationConfirmation(context.Context, *Request) (*Response, error)
+	StopTransactionRequest(context.Context, *Request) (*Response, error)
+	StopTransactionConfirmation(context.Context, *Request) (*Response, error)
 	mustEmbedUnimplementedOCPPMessageServer()
 }
 
@@ -139,11 +217,29 @@ func (UnimplementedOCPPMessageServer) HeartbeatRequest(context.Context, *Request
 func (UnimplementedOCPPMessageServer) HeartbeatConfirmation(context.Context, *Request) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method HeartbeatConfirmation not implemented")
 }
+func (UnimplementedOCPPMessageServer) StartTransactionRequest(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartTransactionRequest not implemented")
+}
+func (UnimplementedOCPPMessageServer) StartTransactionConfirmation(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartTransactionConfirmation not implemented")
+}
+func (UnimplementedOCPPMessageServer) MeterValuesRequest(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MeterValuesRequest not implemented")
+}
+func (UnimplementedOCPPMessageServer) MeterValuesConfirmation(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MeterValuesConfirmation not implemented")
+}
 func (UnimplementedOCPPMessageServer) StatusNotificationRequest(context.Context, *Request) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StatusNotificationRequest not implemented")
 }
 func (UnimplementedOCPPMessageServer) StatusNotificationConfirmation(context.Context, *Request) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StatusNotificationConfirmation not implemented")
+}
+func (UnimplementedOCPPMessageServer) StopTransactionRequest(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopTransactionRequest not implemented")
+}
+func (UnimplementedOCPPMessageServer) StopTransactionConfirmation(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopTransactionConfirmation not implemented")
 }
 func (UnimplementedOCPPMessageServer) mustEmbedUnimplementedOCPPMessageServer() {}
 func (UnimplementedOCPPMessageServer) testEmbeddedByValue()                     {}
@@ -238,6 +334,78 @@ func _OCPPMessage_HeartbeatConfirmation_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OCPPMessage_StartTransactionRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OCPPMessageServer).StartTransactionRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OCPPMessage_StartTransactionRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OCPPMessageServer).StartTransactionRequest(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OCPPMessage_StartTransactionConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OCPPMessageServer).StartTransactionConfirmation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OCPPMessage_StartTransactionConfirmation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OCPPMessageServer).StartTransactionConfirmation(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OCPPMessage_MeterValuesRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OCPPMessageServer).MeterValuesRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OCPPMessage_MeterValuesRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OCPPMessageServer).MeterValuesRequest(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OCPPMessage_MeterValuesConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OCPPMessageServer).MeterValuesConfirmation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OCPPMessage_MeterValuesConfirmation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OCPPMessageServer).MeterValuesConfirmation(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OCPPMessage_StatusNotificationRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Request)
 	if err := dec(in); err != nil {
@@ -274,6 +442,42 @@ func _OCPPMessage_StatusNotificationConfirmation_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OCPPMessage_StopTransactionRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OCPPMessageServer).StopTransactionRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OCPPMessage_StopTransactionRequest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OCPPMessageServer).StopTransactionRequest(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OCPPMessage_StopTransactionConfirmation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OCPPMessageServer).StopTransactionConfirmation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OCPPMessage_StopTransactionConfirmation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OCPPMessageServer).StopTransactionConfirmation(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OCPPMessage_ServiceDesc is the grpc.ServiceDesc for OCPPMessage service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -298,12 +502,36 @@ var OCPPMessage_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OCPPMessage_HeartbeatConfirmation_Handler,
 		},
 		{
+			MethodName: "StartTransactionRequest",
+			Handler:    _OCPPMessage_StartTransactionRequest_Handler,
+		},
+		{
+			MethodName: "StartTransactionConfirmation",
+			Handler:    _OCPPMessage_StartTransactionConfirmation_Handler,
+		},
+		{
+			MethodName: "MeterValuesRequest",
+			Handler:    _OCPPMessage_MeterValuesRequest_Handler,
+		},
+		{
+			MethodName: "MeterValuesConfirmation",
+			Handler:    _OCPPMessage_MeterValuesConfirmation_Handler,
+		},
+		{
 			MethodName: "StatusNotificationRequest",
 			Handler:    _OCPPMessage_StatusNotificationRequest_Handler,
 		},
 		{
 			MethodName: "StatusNotificationConfirmation",
 			Handler:    _OCPPMessage_StatusNotificationConfirmation_Handler,
+		},
+		{
+			MethodName: "StopTransactionRequest",
+			Handler:    _OCPPMessage_StopTransactionRequest_Handler,
+		},
+		{
+			MethodName: "StopTransactionConfirmation",
+			Handler:    _OCPPMessage_StopTransactionConfirmation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
