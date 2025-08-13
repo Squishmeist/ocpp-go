@@ -112,10 +112,69 @@ func (s *MessageService) MeterValuesRequest(ctx context.Context, payload *messag
 		},
 		Body: []byte(`[2,"uuid-meterValues", "MeterValues",{
 			"connectorId": 1,
-			"errorCode": "NoError",
-			"status": "Preparing",
-			"timestamp": "2022-06-12T09:13:00.515Z"
-        }]`),
+			"transactionId": 1,
+			"meterValue": [{
+				"timestamp": "2022-05-20T10:39:19.657Z",
+				"sampledValue": 
+				[
+					{
+						"value": "12903.0",
+						"context": "Sample.Periodic",
+						"format": "Raw",
+						"measurand": "Energy.Active.Import.Register",
+						"location": "Outlet",
+						"unit": "Wh"
+					},
+					{
+						"value": "50000.0",
+						"context": "Sample.Periodic",
+						"format": "Raw",
+						"measurand": "Power.Active.Import",
+						"location": "Outlet",
+						"unit": "W"
+					},
+					{
+						"value": "50.0",
+						"context": "Sample.Periodic",
+						"format": "Raw",
+						"measurand": "Current.Import",
+						"location": "Outlet",
+						"unit": "A"
+					},
+					{
+						"value": "63.0",
+						"context": "Sample.Periodic",
+						"format": "Raw",
+						"measurand": "SoC",
+						"location": "EV",
+						"unit": "Percent"
+					},
+					{
+						"value": "298.8",
+						"context": "Sample.Periodic",
+						"format": "Raw",
+						"measurand": "Temperature",
+						"location": "Body",
+						"unit": "K"
+					},
+					{
+						"value": "270.4",
+						"context": "Sample.Periodic",
+						"format": "Raw",
+						"measurand": "Voltage",
+						"location": "Inlet",
+						"unit": "V"
+					},
+					{
+						"value": "60.0",
+						"context": "Sample.Periodic",
+						"format": "Raw",
+						"measurand": "Frequency",
+						"location": "Inlet"
+					}
+				]
+			}]
+		}]`),
 	})
 }
 
@@ -151,7 +210,7 @@ func (s *MessageService) StartTransactionConfirmation(ctx context.Context, paylo
 			"idTagInfo": {
 				"status": "Accepted"
 			},
-			"transactionId": 1176518341
+			"transactionId": 1
 		}]`),
 	})
 }
@@ -186,7 +245,7 @@ func (s *MessageService) StopTransactionRequest(ctx context.Context, payload *me
 		},
 		Body: []byte(`[2,"uuid-stopTransaction", "StopTransaction",{
 			"reason": "Local",
-			"transactionId": 568161113,
+			"transactionId": 1,
 			"meterStop": 4329600,
 			"timestamp": "2022-09-08T10:31:26.127Z"
         }]`),
