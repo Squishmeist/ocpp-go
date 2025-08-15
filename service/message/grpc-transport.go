@@ -4,6 +4,7 @@ import (
 	"context"
 
 	messagepb "github.com/squishmeist/ocpp-go/pkg/api/proto/message/v1"
+	"go.opentelemetry.io/otel"
 )
 
 type MessageServiceInterface interface {
@@ -33,6 +34,10 @@ func NewMessageGrpcTransport(service MessageServiceInterface) *MessageGrpcTransp
 }
 
 func (h *MessageGrpcTransport) BootNotificationRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "BootNotificationRequest")
+	defer span.End()
+
 	if err := h.Service.BootNotificationRequest(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send boot notification request",
@@ -45,6 +50,10 @@ func (h *MessageGrpcTransport) BootNotificationRequest(ctx context.Context, req 
 }
 
 func (h *MessageGrpcTransport) BootNotificationConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "BootNotificationConfirmation")
+	defer span.End()
+
 	if err := h.Service.BootNotificationConfirmation(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send boot notification confirmation",
@@ -57,6 +66,10 @@ func (h *MessageGrpcTransport) BootNotificationConfirmation(ctx context.Context,
 }
 
 func (h *MessageGrpcTransport) HeartbeatRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "HeartbeatRequest")
+	defer span.End()
+
 	if err := h.Service.HeartbeatRequest(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send heartbeat request",
@@ -69,6 +82,10 @@ func (h *MessageGrpcTransport) HeartbeatRequest(ctx context.Context, req *messag
 }
 
 func (h *MessageGrpcTransport) HeartbeatConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "HeartbeatConfirmation")
+	defer span.End()
+
 	if err := h.Service.HeartbeatConfirmation(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send heartbeat confirmation",
@@ -81,6 +98,10 @@ func (h *MessageGrpcTransport) HeartbeatConfirmation(ctx context.Context, req *m
 }
 
 func (h *MessageGrpcTransport) MeterValuesRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "MeterValuesRequest")
+	defer span.End()
+
 	if err := h.Service.MeterValuesRequest(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send meter values request",
@@ -93,6 +114,10 @@ func (h *MessageGrpcTransport) MeterValuesRequest(ctx context.Context, req *mess
 }
 
 func (h *MessageGrpcTransport) MeterValuesConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "MeterValuesConfirmation")
+	defer span.End()
+
 	if err := h.Service.MeterValuesConfirmation(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send meter values confirmation",
@@ -105,6 +130,10 @@ func (h *MessageGrpcTransport) MeterValuesConfirmation(ctx context.Context, req 
 }
 
 func (h *MessageGrpcTransport) StartTransactionRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "StartTransactionRequest")
+	defer span.End()
+
 	if err := h.Service.StartTransactionRequest(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send start transaction request",
@@ -117,6 +146,10 @@ func (h *MessageGrpcTransport) StartTransactionRequest(ctx context.Context, req 
 }
 
 func (h *MessageGrpcTransport) StartTransactionConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "StartTransactionConfirmation")
+	defer span.End()
+
 	if err := h.Service.StartTransactionConfirmation(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send start transaction confirmation",
@@ -129,6 +162,10 @@ func (h *MessageGrpcTransport) StartTransactionConfirmation(ctx context.Context,
 }
 
 func (h *MessageGrpcTransport) StatusNotificationRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "StatusNotificationRequest")
+	defer span.End()
+
 	if err := h.Service.StatusNotificationRequest(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send status notification request",
@@ -141,6 +178,10 @@ func (h *MessageGrpcTransport) StatusNotificationRequest(ctx context.Context, re
 }
 
 func (h *MessageGrpcTransport) StatusNotificationConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "StatusNotificationConfirmation")
+	defer span.End()
+
 	if err := h.Service.StatusNotificationConfirmation(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send status notification confirmation",
@@ -153,6 +194,10 @@ func (h *MessageGrpcTransport) StatusNotificationConfirmation(ctx context.Contex
 }
 
 func (h *MessageGrpcTransport) StopTransactionRequest(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "StopTransactionRequest")
+	defer span.End()
+
 	if err := h.Service.StopTransactionRequest(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send stop transaction request",
@@ -165,6 +210,10 @@ func (h *MessageGrpcTransport) StopTransactionRequest(ctx context.Context, req *
 }
 
 func (h *MessageGrpcTransport) StopTransactionConfirmation(ctx context.Context, req *messagepb.Request) (*messagepb.Response, error) {
+	tracer := otel.Tracer("ocpp-go/service/message")
+	ctx, span := tracer.Start(ctx, "StopTransactionConfirmation")
+	defer span.End()
+
 	if err := h.Service.StopTransactionConfirmation(ctx, req); err != nil {
 		return &messagepb.Response{
 			Message: "Failed to send stop transaction confirmation",

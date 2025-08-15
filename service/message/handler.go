@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus"
 	"github.com/squishmeist/ocpp-go/internal/core"
 	messagepb "github.com/squishmeist/ocpp-go/pkg/api/proto/message/v1"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type MessageService struct {
@@ -55,10 +56,43 @@ func NewMessageService(opts ...MessageOption) *MessageService {
 	return service
 }
 
+type MetaData struct {
+	SerialNumber string `json:"serialnumber"`
+	Type         string `json:"type"`
+	Target       string `json:"target"`
+	Source       string `json:"source"`
+	TraceParent  string `json:"traceparent"`
+}
+
+func (s *MessageService) metaData(ctx context.Context) (MetaData, error) {
+	span := trace.SpanFromContext(ctx)
+	sc := span.SpanContext()
+	if !sc.IsValid() {
+		return MetaData{}, fmt.Errorf("invalid span context")
+	}
+	id := sc.SpanID().String()
+
+	return MetaData{
+		SerialNumber: "123456789",
+		Type:         "socket.message",
+		Target:       "<target>",
+		Source:       "<source>",
+		TraceParent:  id,
+	}, nil
+}
+
 func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[2,"uuid-bootNotification", "BootNotification",{
             "chargeBoxSerialNumber": "123456789",
@@ -75,9 +109,17 @@ func (s *MessageService) BootNotificationRequest(ctx context.Context, payload *m
 }
 
 func (s *MessageService) BootNotificationConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[3,"uuid-bootNotification",{
             "currentTime": "2024-04-02T11:44:38Z",
@@ -88,27 +130,51 @@ func (s *MessageService) BootNotificationConfirmation(ctx context.Context, paylo
 }
 
 func (s *MessageService) HeartbeatRequest(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[2, "uuid-heartbeat", "Heartbeat", {}]`),
 	})
 }
 
 func (s *MessageService) HeartbeatConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[3, "uuid-heartbeat", { "currentTime": "2025-07-22T11:25:25.230Z" }]`),
 	})
 }
 
 func (s *MessageService) MeterValuesRequest(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[2,"uuid-meterValues", "MeterValues",{
 			"connectorId": 1,
@@ -179,18 +245,34 @@ func (s *MessageService) MeterValuesRequest(ctx context.Context, payload *messag
 }
 
 func (s *MessageService) MeterValuesConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[3,"uuid-meterValues",{}]`),
 	})
 }
 
 func (s *MessageService) StartTransactionRequest(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[2,"uuid-startTransaction", "StartTransaction",{
 			"connectorId": 1,
@@ -202,9 +284,17 @@ func (s *MessageService) StartTransactionRequest(ctx context.Context, payload *m
 }
 
 func (s *MessageService) StartTransactionConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[3,"uuid-startTransaction",{
 			"idTagInfo": {
@@ -216,9 +306,17 @@ func (s *MessageService) StartTransactionConfirmation(ctx context.Context, paylo
 }
 
 func (s *MessageService) StatusNotificationRequest(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[2,"uuid-statusNotification", "StatusNotification",{
 			"connectorId": 1,
@@ -230,18 +328,34 @@ func (s *MessageService) StatusNotificationRequest(ctx context.Context, payload 
 }
 
 func (s *MessageService) StatusNotificationConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[3,"uuid-statusNotification",{}]`),
 	})
 }
 
 func (s *MessageService) StopTransactionRequest(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[2,"uuid-stopTransaction", "StopTransaction",{
 			"reason": "Local",
@@ -253,9 +367,17 @@ func (s *MessageService) StopTransactionRequest(ctx context.Context, payload *me
 }
 
 func (s *MessageService) StopTransactionConfirmation(ctx context.Context, payload *messagepb.Request) error {
+	meta, err := s.metaData(ctx)
+	if err != nil {
+		return err
+	}
 	return s.client.SendMessage(ctx, s.inboundName, &azservicebus.Message{
 		ApplicationProperties: map[string]any{
-			"serialnumber": "123456789",
+			"serialnumber": meta.SerialNumber,
+			"type":         meta.Type,
+			"target":       meta.Target,
+			"source":       meta.Source,
+			"traceparent":  meta.TraceParent,
 		},
 		Body: []byte(`[3,"uuid-stopTransaction",{
 			"idTagInfo":

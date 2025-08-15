@@ -11,4 +11,4 @@ AZURE_SERVICE_BUS:
 DATABASE:
   DRIVER: "sqlite3"
   PROTOCOL: "file"
-  ADDR: "/Users/ainsley.lee/tmp/ocpp.db"
+  ADDR: "/tmp/ocpp.db"
